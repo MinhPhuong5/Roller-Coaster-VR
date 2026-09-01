@@ -55,16 +55,23 @@ public class SeatSwitcher : MonoBehaviour
     }
 
     /// Gọi khi khách bấm nút chọn 1 ghế cụ thể (UI) — "lên tàu": chuyển sang rideCamera
+    /// Gọi khi khách bấm nút chọn 1 ghế cụ thể (UI) — "lên tàu": chuyển sang rideCamera
     public void SwitchSeat(int index)
     {
         if (seats.Length == 0 || rideCamera == null) return;
 
-        // Đặt rideCamera đúng vị trí ghế đã chọn (local, vì cùng cha với seats)
-        rideCamera.transform.localPosition = seats[index].localPosition;
-        rideCamera.transform.localRotation = seats[index].localRotation;
+        currentSeatIndex = index;
 
+        // Chỉ copy vị trí (Position) để ngồi đúng ghế, 
+        // KHÔNG đè localRotation nếu muốn giữ góc quay chuẩn của animation tàu
+        rideCamera.transform.localPosition = seats[index].localPosition;
+
+        // Nếu ghế có đặt góc nhìn riêng thì mới dùng, còn mặc định giữ nguyên góc của rideCamera
         if (rideCameraMouseLook != null)
-            rideCameraMouseLook.ResetLook(seats[index].localRotation);
+        {
+            // Reset chuột về hướng nhìn mặc định của camera tàu
+            rideCameraMouseLook.ResetLook(rideCamera.transform.localRotation);
+        }
 
         EnterSeatedMode();
 
