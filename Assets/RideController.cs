@@ -9,8 +9,8 @@ public class RideController : MonoBehaviour
     private AnimationState state;
 
     [Header("Station (ga)")]
-    [Tooltip("Mốc giây CHÍNH XÁC đọc trực tiếp từ cửa sổ Animation window, lúc tàu nằm đúng ở ga")]
-    public float stationTime = 20f; // <- điền đúng số bạn vừa đọc được ở bước 3
+    [Tooltip("Số giây tính ngược từ cuối clip (Ví dụ: 20 nghĩa là thời gian cuối - 20s)")]
+    public float stationTime = 20f;
 
     [Header("Số vòng chạy")]
     public int numberOfLaps = 2;
@@ -19,7 +19,12 @@ public class RideController : MonoBehaviour
     [Header("Phối hợp với ghế / khách")]
     public SeatSwitcher seatSwitcher;
 
-    [Header("Reload sau khi kết thúc")]
+    [Header("Motion Inverter")]
+    public CoasterFollower motionInverter; // Hoặc CoasterMotionInverter tuỳ tên script bạn đang dùng
+
+    [Header("Tùy chọn kết thúc")]
+    [Tooltip("Tick nếu muốn reload lại toàn bộ Scene khi xong; bỏ tick nếu chỉ muốn xuống xe đứng chọn ghế tại chỗ")]
+    public bool reloadSceneOnFinish = false;
     public float delayBeforeReload = 1f;
 
     public enum RideState { WaitingAtStation, Riding, Finished }
@@ -27,15 +32,28 @@ public class RideController : MonoBehaviour
 
     private float traveledSinceDeparture = 0f;
 
+    // Tính mốc thời gian thực tế ở ga (lấy đuôi trừ đi)
+    private float ActualStationTime => Mathf.Max(0f, state.length - stationTime);
+
     void Start()
     {
         anim = GetComponent<Animation>();
         state = anim[animationClipName];
 
+        if (state == null)
+        {
+            Debug.LogError("Không tìm thấy clip: " + animationClipName);
+            return;
+        }
+
+        // Bắt buộc bật Loop để khi speed = -1f lùi về 0 sẽ tự vòng lại đuôi clip
+        state.wrapMode = WrapMode.Loop;
         totalRideDuration = state.length * numberOfLaps;
 
         anim.Play(animationClipName);
-        state.time = stationTime; // <- dùng thẳng, không trừ gì cả
+
+        // Đặt đúng mốc ga đảo ngược: thời gian cuối - 20s
+        state.time = ActualStationTime;
         state.speed = 0f;
         anim.Sample();
 
@@ -49,15 +67,17 @@ public class RideController : MonoBehaviour
         traveledSinceDeparture += Time.deltaTime;
 
         if (traveledSinceDeparture >= totalRideDuration)
+        {
             FinishRide();
+        }
     }
 
     public void StartRide()
     {
-        if (currentState != RideState.WaitingAtStation) return;
+        if (currentState != RideState.WaitingAtStation || state == null) return;
 
         traveledSinceDeparture = 0f;
-        state.speed = -1f;
+        state.speed = -1f; // Chạy lùi ngược timeline để đi xuôi chiều ray
         currentState = RideState.Riding;
 
         if (seatSwitcher != null)
@@ -66,14 +86,25 @@ public class RideController : MonoBehaviour
 
     private void FinishRide()
     {
-        state.time = stationTime;
+        // Dừng tàu lại đúng vị trí ga phẳng ban đầu
+        state.time = ActualStationTime;
         state.speed = 0f;
+        anim.Sample();
         currentState = RideState.Finished;
 
+        // Cho người chơi rời ghế, hiện lại UI chọn chỗ ban đầu
         if (seatSwitcher != null)
             seatSwitcher.ExitCar();
 
-        Invoke(nameof(ReloadScene), delayBeforeReload);
+        if (reloadSceneOnFinish)
+        {
+            Invoke(nameof(ReloadScene), delayBeforeReload);
+        }
+        else
+        {
+            // Cho phép chọn ghế và chơi tiếp lượt mới ngay tại chỗ
+            currentState = RideState.WaitingAtStation;
+        }
     }
 
     private void ReloadScene()

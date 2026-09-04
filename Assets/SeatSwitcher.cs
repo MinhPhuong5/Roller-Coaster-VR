@@ -1,27 +1,14 @@
 using UnityEngine;
 
-/// <summary>
-/// Quản lý 2 chế độ camera:
-/// - "Boarding" (đang chọn ghế): dùng mainCamera — object TĨNH, đặt sẵn 1 lần
-///   trong Scene view ở ngoài track, nhìn thấy toàn bộ tàu.
-/// - "Seated" (đã chọn ghế / đang chạy): dùng rideCamera — object là con của
-///   tàu (KexLSMfoSketchfab), tự động trôi theo animation của tàu.
-///   Vị trí bên trong ghế được set bằng cách copy local position/rotation
-///   từ Seat, vì rideCamera và Seats CÙNG CHA nên phép copy local này đúng.
-/// </summary>
 public class SeatSwitcher : MonoBehaviour
 {
     [Header("2 Camera")]
-    [Tooltip("Camera tĩnh dùng lúc đang chọn ghế, đứng ngoài nhìn tàu (Main Camera mặc định của project)")]
     public GameObject mainCamera;
-    [Tooltip("Camera POV bên trong tàu, là con của model tàu (BluffTitler Camera Layer 9-Camera)")]
     public GameObject rideCamera;
-
-    [Tooltip("MouseLook gắn trên rideCamera — cần reset góc nhìn mỗi lần đổi ghế")]
     public MouseLook rideCameraMouseLook;
 
-    [Header("Ghế trong tàu (con của model tàu, cùng cha với rideCamera)")]
-    public Transform[] seats; // 0: Front-Left, 1: Front-Right, 2: Back-Left, 3: Back-Right
+    [Header("Ghế trong tàu")]
+    public Transform[] seats;
     private int currentSeatIndex = 0;
 
     [Header("Ride")]
@@ -33,10 +20,10 @@ public class SeatSwitcher : MonoBehaviour
 
     void Start()
     {
-        EnterBoardingMode(); // mới vào scene: dùng Main Camera, đứng ngoài nhìn tàu
+        EnterBoardingMode();
 
         if (startButton != null)
-            startButton.SetActive(false); // ẩn nút Bắt đầu lúc mới vào
+            startButton.SetActive(false);
     }
 
     void Update()
@@ -54,52 +41,62 @@ public class SeatSwitcher : MonoBehaviour
         SwitchSeat(currentSeatIndex);
     }
 
-    /// Gọi khi khách bấm nút chọn 1 ghế cụ thể (UI) — "lên tàu": chuyển sang rideCamera
-    /// Gọi khi khách bấm nút chọn 1 ghế cụ thể (UI) — "lên tàu": chuyển sang rideCamera
     public void SwitchSeat(int index)
     {
         if (seats.Length == 0 || rideCamera == null) return;
 
         currentSeatIndex = index;
 
-        // Chỉ copy vị trí (Position) để ngồi đúng ghế, 
-        // KHÔNG đè localRotation nếu muốn giữ góc quay chuẩn của animation tàu
+        // Copy vị trí và góc quay 180 độ chuẩn của ghế
         rideCamera.transform.localPosition = seats[index].localPosition;
+        rideCamera.transform.localRotation = seats[index].localRotation;
 
-        // Nếu ghế có đặt góc nhìn riêng thì mới dùng, còn mặc định giữ nguyên góc của rideCamera
         if (rideCameraMouseLook != null)
         {
-            // Reset chuột về hướng nhìn mặc định của camera tàu
             rideCameraMouseLook.ResetLook(rideCamera.transform.localRotation);
         }
 
         EnterSeatedMode();
 
         if (startButton != null)
-            startButton.SetActive(true); // đã chọn ghế -> hiện nút Bắt đầu
+            startButton.SetActive(true);
     }
 
-    /// Bật Main Camera, tắt rideCamera — dùng lúc chờ chọn ghế
     public void EnterBoardingMode()
     {
+        // 1. Chuyển camera về sân ga
         if (mainCamera != null) mainCamera.SetActive(true);
         if (rideCamera != null) rideCamera.SetActive(false);
+
+        // 2. Mở khóa và hiện lại con trỏ chuột để bấm nút UI
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // 3. Hiện lại bảng chọn ghế và ẩn nút bắt đầu
+        if (uiPanel != null) uiPanel.SetActive(true);
+        if (startButton != null) startButton.SetActive(false);
     }
 
-    /// Bật rideCamera, tắt Main Camera — dùng khi đã ngồi vào ghế / đang chạy
     public void EnterSeatedMode()
     {
         if (mainCamera != null) mainCamera.SetActive(false);
         if (rideCamera != null) rideCamera.SetActive(true);
     }
 
-    /// Gọi từ RideController.FinishRide() khi kết thúc chuyến đi — "xuống tàu"
-    public void ExitCar() => EnterBoardingMode();
+    // Được gọi khi tàu chạy xong 2 vòng trở về ga
+    public void ExitCar()
+    {
+        EnterBoardingMode();
+    }
 
     public void HideUI()
     {
         if (uiPanel != null) uiPanel.SetActive(false);
         if (startButton != null) startButton.SetActive(false);
+
+        // Khi bắt đầu tàu chạy, khóa chuột để xoay nhìn tự do
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     public void ShowUI()
