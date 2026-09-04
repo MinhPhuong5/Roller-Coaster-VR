@@ -99,6 +99,7 @@ public class SeatSwitcher : MonoBehaviour
     public void HideUI()
     {
         if (uiPanel != null) uiPanel.SetActive(false);
+        if (startButton != null) startButton.SetActive(false);
     }
 
     public void ShowUI()
