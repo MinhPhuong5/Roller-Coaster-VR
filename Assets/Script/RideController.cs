@@ -19,9 +19,6 @@ public class RideController : MonoBehaviour
     [Header("Phối hợp với ghế / khách")]
     public SeatSwitcher seatSwitcher;
 
-    [Header("Motion Inverter")]
-    public CoasterFollower motionInverter; // Hoặc CoasterMotionInverter tuỳ tên script bạn đang dùng
-
     [Header("Tùy chọn kết thúc")]
     [Tooltip("Tick nếu muốn reload lại toàn bộ Scene khi xong; bỏ tick nếu chỉ muốn xuống xe đứng chọn ghế tại chỗ")]
     public bool reloadSceneOnFinish = false;
@@ -38,6 +35,13 @@ public class RideController : MonoBehaviour
     void Start()
     {
         anim = GetComponent<Animation>();
+        if (anim == null)
+        {
+            Debug.LogError("RideController cần một component Animation trên cùng GameObject.");
+            enabled = false;
+            return;
+        }
+
         state = anim[animationClipName];
 
         if (state == null)
@@ -48,7 +52,7 @@ public class RideController : MonoBehaviour
 
         // Bắt buộc bật Loop để khi speed = -1f lùi về 0 sẽ tự vòng lại đuôi clip
         state.wrapMode = WrapMode.Loop;
-        totalRideDuration = state.length * numberOfLaps;
+        totalRideDuration = state.length * Mathf.Max(1, numberOfLaps);
 
         anim.Play(animationClipName);
 

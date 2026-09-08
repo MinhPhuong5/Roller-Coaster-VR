@@ -37,13 +37,16 @@ public class SeatSwitcher : MonoBehaviour
 
     public void NextSeat()
     {
+        if (seats == null || seats.Length == 0) return;
+
         currentSeatIndex = (currentSeatIndex + 1) % seats.Length;
         SwitchSeat(currentSeatIndex);
     }
 
     public void SwitchSeat(int index)
     {
-        if (seats.Length == 0 || rideCamera == null) return;
+        if (seats == null || seats.Length == 0 || rideCamera == null) return;
+        if (index < 0 || index >= seats.Length || seats[index] == null) return;
 
         currentSeatIndex = index;
 
