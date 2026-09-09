@@ -2,12 +2,14 @@
   <Project Path="Unity.InputSystem.csproj" />
   <Project Path="Unity.RenderPipelines.GPUDriven.Runtime.csproj" />
   <Project Path="Unity.ShaderGraph.Editor.csproj" />
+  <Project Path="Unity.ProBuilder.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.csproj" />
   <Project Path="Unity.Multiplayer.Center.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Editor.csproj" />
   <Project Path="Unity.Collections.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.2D.Runtime.csproj" />
   <Project Path="UnityEngine.UI.csproj" />
+  <Project Path="Unity.ProBuilder.Poly2Tri.csproj" />
   <Project Path="Unity.XR.Simulation.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Editor.csproj" />
   <Project Path="Unity.PerformanceTesting.Editor.csproj" />
@@ -19,6 +21,7 @@
   <Project Path="Unity.Tutorials.Editor.csproj" />
   <Project Path="glTFast.csproj" />
   <Project Path="Unity.XR.ARSubsystems.csproj" />
+  <Project Path="Unity.ProBuilder.Csg.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.csproj" />
   <Project Path="Unity.VisualStudio.Editor.csproj" />
   <Project Path="Unity.XR.ARFoundation.csproj" />
@@ -27,6 +30,7 @@
   <Project Path="Unity.XR.Simulation.Editor.csproj" />
   <Project Path="Unity.Searcher.Editor.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.StarterAssets.csproj" />
+  <Project Path="Unity.ProBuilder.Editor.csproj" />
   <Project Path="Unity.XR.Hands.csproj" />
   <Project Path="glTFast.Documentation.Examples.csproj" />
   <Project Path="UnityEditor.TestRunner.csproj" />
@@ -47,7 +51,6 @@
   <Project Path="Unity.TextMeshPro.Editor.csproj" />
   <Project Path="Unity.XR.CompositionLayers.csproj" />
   <Project Path="Unity.XR.CompositionLayers.Editor.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.Burst.Editor.csproj" />
   <Project Path="Unity.TestTools.CodeCoverage.Editor.OpenCover.Mono.Reflection.csproj" />
   <Project Path="Unity.Rider.Editor.csproj" />
@@ -64,9 +67,12 @@
   <Project Path="Unity.XR.OpenXR.Editor.csproj" />
   <Project Path="Unity.XR.AndroidOpenXR.Editor.csproj" />
   <Project Path="Unity.Multiplayer.Center.Common.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Analytics.Editor.csproj" />
+  <Project Path="Unity.ProBuilder.KdTree.csproj" />
   <Project Path="Unity.XR.Management.Editor.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.CodeSamples.Tests.csproj" />
+  <Project Path="Unity.ProBuilder.AddOns.Editor.csproj" />
   <Project Path="Unity.XR.OpenXR.Features.MetaQuestSupport.Editor.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.Hands.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
@@ -81,6 +87,7 @@
   <Project Path="Unity.PathTracing.Runtime.csproj" />
   <Project Path="Unity.PathTracing.Editor.csproj" />
   <Project Path="Unity.XR.MetaOpenXR.Editor.csproj" />
+  <Project Path="Unity.ProBuilder.AssetIdRemapUtility.csproj" />
   <Project Path="Unity.XR.CompositionLayers.UIInteraction.Editor.csproj" />
   <Project Path="Unity.Settings.Editor.csproj" />
   <Project Path="Unity.InputSystem.TestFramework.csproj" />
@@ -106,6 +113,7 @@
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.InternalAPIEditorBridge.ShaderGraph.Editor.csproj" />
+  <Project Path="Unity.ProBuilder.Stl.csproj" />
   <Project Path="Unity.XR.ARAnalytics.Editor.csproj" />
   <Project Path="Unity.XR.ARFoundation.InternalUtils.Editor.csproj" />
   <Project Path="Unity.XR.OpenXR.TestTooling.csproj" />
