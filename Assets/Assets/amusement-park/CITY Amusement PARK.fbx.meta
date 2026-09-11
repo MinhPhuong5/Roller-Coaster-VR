@@ -1,0 +1,374 @@
+fileFormatVersion: 2
+guid: 8b40761b3409df942b2c9be4af9b53f4
+ModelImporter:
+  serializedVersion: 24501
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: 1
+    second: {fileID: 2800000, guid: 97e78a6acf2da3143bb1aae3e5da2afa, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: 1_ref
+    second: {fileID: 2800000, guid: 9bf4ceb24ecc8094c9f4d7d351cc0b1a, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: 2_O
+    second: {fileID: 2800000, guid: 1082267926025d848b46b214c140d45b, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: 3
+    second: {fileID: 2800000, guid: b16f2823aa6bd0942a5f3ee00c1f2ec4, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: 6
+    second: {fileID: 2800000, guid: c11f20bcaac321243982be963b4f10c1, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: 7
+    second: {fileID: 2800000, guid: b08449854527a28458c91a838556232a, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Beton_3_D
+    second: {fileID: 2800000, guid: 8762b0a57e4066f4ea0ceac2d794b783, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Beton_4_D
+    second: {fileID: 2800000, guid: d9978ab82cfe0c241939ea167144c9cc, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Beton_5_D
+    second: {fileID: 2800000, guid: eb64d9129a9c45244abf81f99fc62143, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Beton_6_D
+    second: {fileID: 2800000, guid: 45213627c4b5adb42a2acedb3b721a92, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Beton_7_D
+    second: {fileID: 2800000, guid: c7e0f8031a89c9b43be5a068ecab2bb6, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Beton_8_D
+    second: {fileID: 2800000, guid: 6b3b40dfd3e6de14aba2aaf3cb8c1be1, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Crack_1
+    second: {fileID: 2800000, guid: 0eac79e3eff6f2c4fa730f4f9b731e9d, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Crack_2
+    second: {fileID: 2800000, guid: 96f7919e5726ea540b8624ff850100bc, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Decal_beton_1_D
+    second: {fileID: 2800000, guid: 2076c7d450c2436488ac5d6889c71b9c, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Decal_beton_2_D
+    second: {fileID: 2800000, guid: 9fd6385217c54b749b0a484db01dfdd8, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Decals_Floor_1_D
+    second: {fileID: 2800000, guid: 3ed7648c1b3fb2e41b813bf5fba058a5, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Dirt_2_D
+    second: {fileID: 2800000, guid: 7522dac3fb7df8a45bfe4f2c34d60f7a, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Dirt_3_D
+    second: {fileID: 2800000, guid: c01651ad099855449940a1242d9dc6db, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Dirt_D
+    second: {fileID: 2800000, guid: 7c1cb9f9af5962a4bad9c29e4c1e5be0, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: GroundCell16
+    second: {fileID: 2800000, guid: ae618c915d448a54b97d750871119aa6, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Light 2
+    second: {fileID: 2800000, guid: f32a9117eea817e4fac04710848c4f24, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: SC_DECAL_CPD02_Outdoor
+    second: {fileID: 2800000, guid: db0af3a70fa50ac41a0b803f2bef6402, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: SC_DECAL_RoadMarking01
+    second: {fileID: 2800000, guid: c1ee469c33c986d4e9bbaf84eb1a30f2, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: barbwire_tex7
+    second: {fileID: 2800000, guid: f5963f15bd7d4b0439825166ea1f70df, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: car_rgb_01_green1
+    second: {fileID: 2800000, guid: 0e628250f14668f4dade47e8b76e4e08, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_ads
+    second: {fileID: 2800000, guid: 55629673a85c92d4480c78c2b857ae99, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_ads2
+    second: {fileID: 2800000, guid: 24845238a2e848c49aef7644b67cbc7e, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_crack4
+    second: {fileID: 2800000, guid: cefbe583a691f5f4788e1ee6ada96ee7, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_crack5
+    second: {fileID: 2800000, guid: cf97031fb3608ab46bfce67b22ae68f9, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_dirty
+    second: {fileID: 2800000, guid: c8bd0e02b33e56240b27a7c4e9cb0737, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_dirty4
+    second: {fileID: 2800000, guid: 8352b8e4f1edea94f8efe2f567855cde, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_trash2
+    second: {fileID: 2800000, guid: c311e7a259985e842854b2658cec2c94, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_trash4
+    second: {fileID: 2800000, guid: 7b27fc6d3b495b84cb14acec746fc6f4, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_trash_1_D
+    second: {fileID: 2800000, guid: f6b4f7ea49b030e4a87549de3ea30a64, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_trash_2_D
+    second: {fileID: 2800000, guid: 3e9b0f4eb73bf2b4d80abfef1bad34c0, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: decal_trash_3_D
+    second: {fileID: 2800000, guid: 1d761e157aa402c4893ca1cb7eb1fbc1, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: env_opacity
+    second: {fileID: 2800000, guid: 9122f7754697ef54fb9e03e8505ae4c9, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: env_texture
+    second: {fileID: 2800000, guid: 237135e6765ffa746ba5f5f834a10604, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: glass-metallic4
+    second: {fileID: 2800000, guid: 241c0f009e5cdc34aa2df509cd3a3eb8, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: health_bar_bg
+    second: {fileID: 2800000, guid: bb10540c9676fb14c80130a862ebdf25, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: holo_lines_1
+    second: {fileID: 2800000, guid: cde795d868c494f4498812c6ba174b83, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: hub_posters
+    second: {fileID: 2800000, guid: d608d6acc882c6640ad9055918c0b81e, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: interference
+    second: {fileID: 2800000, guid: 0cacaf629ee7996449495d539dc1b201, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: main_tex
+    second: {fileID: 2800000, guid: 5e5b8828c894d284da0e2dca11bc1832, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: painterTexture
+    second: {fileID: 2800000, guid: a30850ecfb4876543a8e336c92a0bf11, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: pickup_rgb_03_camo2
+    second: {fileID: 2800000, guid: 56933a11f09ee97469366b7ec8611805, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: pickup_rgb_03_yellow2
+    second: {fileID: 2800000, guid: c716f44fda8b4564f97fc1e814e77edf, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: shadow1
+    second: {fileID: 2800000, guid: 05eabc18e9056ef4797b6671c3886f2c, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: shadow3
+    second: {fileID: 2800000, guid: 5c458f238ee6e284f95a33d4273b4984, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: shadow3_half
+    second: {fileID: 2800000, guid: 25bf949fe602c7744b1b543e20c3d9cb, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: shadow4-half
+    second: {fileID: 2800000, guid: ddc4490cd4d036944812a99cf288f97d, type: 3}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
