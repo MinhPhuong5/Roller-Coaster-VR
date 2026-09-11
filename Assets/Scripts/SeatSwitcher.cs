@@ -14,12 +14,31 @@ public class SeatSwitcher : MonoBehaviour
     [Header("Ride")]
     public RideController rideController;
 
+    [Header("Audio")]
+    public AudioSource trackAudioSource;
+    public float minPitch = 0.8f;
+    public float maxPitch = 1.5f;
+
     [Header("UI")]
     public GameObject uiPanel;
     public GameObject startButton;
 
+    private bool isRiding = false;
+    private Vector3 lastRidePosition;
+
     void Start()
     {
+        // Tự lấy AudioSource nếu quên chưa kéo vào Inspector
+        if (trackAudioSource == null)
+            trackAudioSource = GetComponent<AudioSource>();
+
+        if (trackAudioSource != null)
+        {
+            trackAudioSource.playOnAwake = false;
+            trackAudioSource.loop = true;
+            trackAudioSource.Stop();
+        }
+
         EnterBoardingMode();
 
         if (startButton != null)
@@ -29,7 +48,20 @@ public class SeatSwitcher : MonoBehaviour
     void Update()
     {
         if (rideController != null && rideController.currentState != RideController.RideState.WaitingAtStation)
+        {
+            // Đang trong hành trình: biến thiên âm thanh theo tốc độ di chuyển thực tế
+            if (isRiding && trackAudioSource != null && rideCamera != null && Time.deltaTime > 0f)
+            {
+                float distance = Vector3.Distance(rideCamera.transform.position, lastRidePosition);
+                float speed = distance / Time.deltaTime;
+                lastRidePosition = rideCamera.transform.position;
+
+                // Tăng dần độ gầm rú (Pitch) theo vận tốc tàu
+                float speedRatio = Mathf.InverseLerp(1f, 30f, speed);
+                trackAudioSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
+            }
             return;
+        }
 
         if (Input.GetKeyDown(KeyCode.Tab))
             NextSeat();
@@ -47,7 +79,6 @@ public class SeatSwitcher : MonoBehaviour
 
         currentSeatIndex = index;
 
-        // Copy vị trí và góc quay 180 độ chuẩn của ghế
         rideCamera.transform.localPosition = seats[index].localPosition;
         rideCamera.transform.localRotation = seats[index].localRotation;
 
@@ -64,15 +95,15 @@ public class SeatSwitcher : MonoBehaviour
 
     public void EnterBoardingMode()
     {
-        // 1. Chuyển camera về sân ga
+        isRiding = false;
+        if (trackAudioSource != null) trackAudioSource.Stop();
+
         if (mainCamera != null) mainCamera.SetActive(true);
         if (rideCamera != null) rideCamera.SetActive(false);
 
-        // 2. Mở khóa và hiện lại con trỏ chuột để bấm nút UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // 3. Hiện lại bảng chọn ghế và ẩn nút bắt đầu
         if (uiPanel != null) uiPanel.SetActive(true);
         if (startButton != null) startButton.SetActive(false);
     }
@@ -83,20 +114,24 @@ public class SeatSwitcher : MonoBehaviour
         if (rideCamera != null) rideCamera.SetActive(true);
     }
 
-    // Được gọi khi tàu chạy xong 2 vòng trở về ga
     public void ExitCar()
     {
         EnterBoardingMode();
     }
 
+    // ĐƯỢC GỌI KHI BẤM NÚT START ĐỂ TÀU CHẠY
     public void HideUI()
     {
         if (uiPanel != null) uiPanel.SetActive(false);
         if (startButton != null) startButton.SetActive(false);
 
-        // Khi bắt đầu tàu chạy, khóa chuột để xoay nhìn tự do
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        // BẬT ÂM THANH CHUẨN XÁC TẠI ĐÂY
+        isRiding = true;
+        if (rideCamera != null) lastRidePosition = rideCamera.transform.position;
+        if (trackAudioSource != null) trackAudioSource.Play();
     }
 
     public void ShowUI()
