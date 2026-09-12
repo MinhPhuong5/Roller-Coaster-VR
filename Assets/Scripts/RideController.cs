@@ -90,9 +90,11 @@ public class RideController : MonoBehaviour
         state.time = ActualStationTime;
         state.speed = 0f;
         anim.Sample();
+
+        // GIỮ NGUYÊN TRẠNG THÁI Finished, KHÔNG ĐỔI VỀ WaitingAtStation NGAY
         currentState = RideState.Finished;
 
-        // Cho người chơi rời ghế, hiện lại UI chọn chỗ ban đầu
+        // Cho người chơi xem rào hạ xuống và chờ đủ 6 giây
         if (seatSwitcher != null)
             seatSwitcher.ExitCar();
 
@@ -100,11 +102,12 @@ public class RideController : MonoBehaviour
         {
             Invoke(nameof(ReloadScene), delayBeforeReload);
         }
-        else
-        {
-            // Cho phép chọn ghế và chơi tiếp lượt mới ngay tại chỗ
-            currentState = RideState.WaitingAtStation;
-        }
+    }
+
+    // Thêm hàm công khai này để SeatSwitcher gọi khi đã hoàn tất 6 giây hạ rào
+    public void ResetToStation()
+    {
+        currentState = RideState.WaitingAtStation;
     }
 
     private void ReloadScene()
