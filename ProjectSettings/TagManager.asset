@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Anchor
   - Ground
+  - GroundMain
   layers:
   - Default
   - TransparentFX

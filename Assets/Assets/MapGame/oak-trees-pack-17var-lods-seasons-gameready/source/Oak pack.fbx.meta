@@ -1,0 +1,242 @@
+fileFormatVersion: 2
+guid: b4b0fa2816d9b3a488f322f3789671a2
+ModelImporter:
+  serializedVersion: 24501
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Bark_Mat
+    second: {fileID: 2100000, guid: 223ee390b7d07c54f8d49b9dd7789469, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Big oak tree _001_Billboard_Mat
+    second: {fileID: 2100000, guid: 6e358f9b3fd60ec4ea36914a3d76cf04, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Big oak tree _002_Billboard_Mat
+    second: {fileID: 2100000, guid: a44adb8aa005df14385900ac210c9f2d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Big oak tree _003_Billboard_Mat
+    second: {fileID: 2100000, guid: f374b40806752884f87f6f35bfa27a04, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Big oak tree _004_Billboard_Mat
+    second: {fileID: 2100000, guid: 0baa1235b149dc948b1a4046550156b7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Checker_mat
+    second: {fileID: 2100000, guid: fac8705b2948c9b42a3cee1424a2998e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Cluster_Mat
+    second: {fileID: 2100000, guid: 3dd9aa2b51839ea41b25b4765f92099d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Cluster_Mat Early autumn EX
+    second: {fileID: 2100000, guid: d4710ca0ee6ab1841a8c29f14afc2958, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Cluster_Mat Late Autumn EX
+    second: {fileID: 2100000, guid: fb3d38ac91e267141be341960620297c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Cluster_Mat Spring EX
+    second: {fileID: 2100000, guid: 22495ad9ad6fed74385c40039e32d267, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Cluster_Mat Winter EX
+    second: {fileID: 2100000, guid: f4e603d687cb4ef47bad62c85a1efda5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Large oak tree_001_Billboard_Mat
+    second: {fileID: 2100000, guid: c679d2b4bd61589469b5e52612ba03f3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Large oak tree_002_Billboard_Mat
+    second: {fileID: 2100000, guid: a64bbef3fc2f39148be0d7839915ee1d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Large oak tree_003_Billboard_Mat
+    second: {fileID: 2100000, guid: 2c5be6623beddfe4a9d54cbaface4e0e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Large oak tree_004_Billboard_Mat
+    second: {fileID: 2100000, guid: d7d1018d5f30d81499a89721c15dc64c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Man_ref
+    second: {fileID: 2100000, guid: 6a62c767e5641864aaeb074e69d2fc03, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Medium oak tree _001_Billboard_Mat
+    second: {fileID: 2100000, guid: f541bfd5fde36034b8867ddd2d3f2ad4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Medium oak tree _002_Billboard_Mat
+    second: {fileID: 2100000, guid: ad07556560bfd5045b76d25fe2aee247, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Medium oak tree _003_Billboard_Mat
+    second: {fileID: 2100000, guid: a19b0135a320f864a914c77f6cb80134, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sapling oak tree_001_Billboard_Mat
+    second: {fileID: 2100000, guid: f6454935b53169a43aaa2d6262f07cfe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sapling oak tree_002_Billboard_Mat
+    second: {fileID: 2100000, guid: 85c749804d9b31649960822be228983a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Sapling oak tree_003_Billboard_Mat
+    second: {fileID: 2100000, guid: ece75ab4733742548961ed8907d6aef9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Small oak tree _001_Billboard_Mat
+    second: {fileID: 2100000, guid: 9c8a22bcaf3e56c4cb8df3e8fa9da934, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Small oak tree _002_Billboard_Mat
+    second: {fileID: 2100000, guid: 41879123583cd2a40a0ea33d3e410f19, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Small oak tree _003_Billboard_Mat
+    second: {fileID: 2100000, guid: 5740ead4137bd7449818a587e1b35bb8, type: 2}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages:
+    - 0.25
+    - 0.125
+    - 0.01
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

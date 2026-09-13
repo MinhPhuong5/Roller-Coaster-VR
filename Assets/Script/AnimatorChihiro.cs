@@ -9,6 +9,8 @@ public class AnimatorChihiro : MonoBehaviour
     public float moveSpeed = 5f;
     [Tooltip("Tốc độ rẽ trái/phải, tính theo độ mỗi giây")]
     public float turnSpeed = 540f;
+    [Tooltip("Bỏ qua nhiễu nhỏ từ joystick để nhân vật không tự xoay")]
+    [Range(0f, 1f)] public float turnDeadZone = 0.2f;
 
     [Header("Nhảy")]
     public string groundTag = "Ground";
@@ -62,6 +64,10 @@ public class AnimatorChihiro : MonoBehaviour
         // Tank controls: W/S tiến-lùi, A/D chỉ rẽ.
         moveInput = Input.GetAxisRaw("Vertical");
         turnInput = Input.GetAxisRaw("Horizontal");
+        if (Mathf.Abs(turnInput) < turnDeadZone)
+        {
+            turnInput = 0f;
+        }
 
         // Luôn ghi nhận phím tại đây; trạng thái chạm đất được kiểm tra ở FixedUpdate.
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
