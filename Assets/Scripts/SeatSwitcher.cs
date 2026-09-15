@@ -28,14 +28,13 @@ public class SeatSwitcher : MonoBehaviour
     public GameObject uiPanel;
     public GameObject startButton;
 
-    [Header("Thời Gian Chờ Rào Chắn (Giây)")]
+    [Header("Thời Gian Chờ Mở Rào (Giây)")]
     [Tooltip("Thời gian chờ rào nâng lên xong trước khi tàu chạy")]
     public float gateOpenDelay = 6.0f;
-    [Tooltip("Thời gian chờ rào hạ xuống xong trước khi thoát ra màn hình chọn ghế")]
-    public float gateCloseDelay = 6.0f;
 
     private bool isRiding = false;
     private bool isHandlingExit = false;
+    private bool isGateAlreadyClosed = false;
     private Vector3 lastRidePosition;
 
     void Start()
@@ -52,25 +51,16 @@ public class SeatSwitcher : MonoBehaviour
 
     void Update()
     {
-        // 1. KIỂM TRA KHI TÀU VỀ GA
+        // 1. Phím chuyển ghế Tab chỉ nhận khi tàu đang đỗ ở ga và không trong quá trình xử lý ra/vào
         if (rideController != null && rideController.currentState == RideController.RideState.WaitingAtStation)
         {
-            // Chỉ kích hoạt chu trình hạ rào nếu tàu vừa chạy xong và chưa từng vào trạng thái chờ thoát
-            if (isRiding && !isHandlingExit)
-            {
-                ExitCar();
-            }
-
-            // Chỉ cho phép chuyển ghế khi đã thoát hẳn ra ngoài (không còn trong hành trình)
             if (!isRiding && !isHandlingExit && Input.GetKeyDown(KeyCode.Tab))
             {
                 NextSeat();
             }
-
-            return;
         }
 
-        // 2. TÀU ĐANG TRÊN ĐƯỜNG CHẠY: Cập nhật Pitch theo vận tốc
+        // 2. Cập nhật Pitch theo vận tốc thực tế của tàu
         if (isRiding && trackAudioSource != null && rideCamera != null && Time.deltaTime > 0f)
         {
             float distance = Vector3.Distance(rideCamera.transform.position, lastRidePosition);
@@ -108,7 +98,6 @@ public class SeatSwitcher : MonoBehaviour
             startButton.SetActive(true);
     }
 
-    // Khóa hàm này: Nếu đang trong tiến trình chờ hạ rào 6s thì cấm mọi script bên ngoài ép thoát
     public void EnterBoardingMode()
     {
         if (isHandlingExit) return;
@@ -135,7 +124,17 @@ public class SeatSwitcher : MonoBehaviour
         if (rideCamera != null) rideCamera.SetActive(true);
     }
 
-    // Được gọi từ RideController hoặc hàm Update
+    // ĐƯỢC GỌI TỪ RIDECONTROLLER KHI TÀU CHẠY ĐẾN ĐOẠN THẲNG TIẾP CẬN GA
+    public void TriggerEarlyGateClose()
+    {
+        if (!isGateAlreadyClosed && stationGate != null)
+        {
+            isGateAlreadyClosed = true;
+            stationGate.CloseGate();
+        }
+    }
+
+    // ĐƯỢC GỌI TỪ RIDECONTROLLER KHI TÀU ĐÃ CẬP BẾN DỪNG HẲN
     public void ExitCar()
     {
         if (!isHandlingExit && isRiding)
@@ -144,7 +143,6 @@ public class SeatSwitcher : MonoBehaviour
         }
     }
 
-    // Được gọi khi bấm nút Start
     public void HideUI()
     {
         if (uiPanel != null) uiPanel.SetActive(false);
@@ -158,22 +156,23 @@ public class SeatSwitcher : MonoBehaviour
 
     private IEnumerator StartRideSequence()
     {
-        // 1. Mở rào chắn và phát âm thanh mở
+        isGateAlreadyClosed = false;
+
+        // 1. Mở rào chắn xuất phát
         if (stationGate != null)
         {
             stationGate.OpenGate();
         }
 
-        // 2. Chờ đủ thời gian khai báo để rào mở hẳn
+        // 2. Chờ đủ thời gian rào mở hẳn
         yield return new WaitForSeconds(gateOpenDelay);
 
-        // 3. Kích hoạt tàu lăn bánh
+        // 3. Tàu bắt đầu lăn bánh
         if (rideController != null)
         {
             rideController.StartRide();
         }
 
-        // 4. Bật âm thanh ray tàu
         isRiding = true;
         isHandlingExit = false;
 
@@ -197,16 +196,10 @@ public class SeatSwitcher : MonoBehaviour
             brakeAudioSource.Play();
         }
 
-        yield return new WaitForSeconds(1.0f);
+        // Vì rào đã hạ đón đầu từ trước, người chơi chỉ cần nán lại 1.2s nhìn sân ga
+        yield return new WaitForSeconds(1.2f);
 
-        if (stationGate != null)
-        {
-            stationGate.CloseGate();
-        }
-
-        // Chờ hết thời gian rào hạ xuống
-        yield return new WaitForSeconds(gateCloseDelay + 0.3f);
-
+        // Cắt dứt điểm âm thanh rào nếu còn dư âm
         if (stationGate != null && stationGate.gateAudioSource != null)
         {
             stationGate.gateAudioSource.Stop();
@@ -216,7 +209,7 @@ public class SeatSwitcher : MonoBehaviour
         isHandlingExit = false;
         ForceBoardingMode();
 
-        // BÁO CHO RIDECONTROLLER BIẾT ĐÃ HOÀN TẤT, SẴN SÀNG ĐÓN LƯỢT MỚI
+        // Báo cho RideController chuyển sang trạng thái chờ lượt mới
         if (rideController != null)
         {
             rideController.ResetToStation();
