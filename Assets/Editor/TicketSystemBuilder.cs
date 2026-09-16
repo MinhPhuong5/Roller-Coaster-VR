@@ -119,90 +119,102 @@ public static class TicketSystemBuilder
         promptObj.SetActive(false); // Mặc định ẩn, khi lại gần mới hiện
 
         // ==========================================
-        // B. POPUP CHÀO MỪNG TƯƠI MỚI SÁNG TẠO (PHONG CÁCH CÔNG VIÊN SÓC NHÍ)
+        // B. CẢNH MỞ ĐẦU HỘI THOẠI HAKU (VISUAL NOVEL STYLE)
         // ==========================================
+        string hakuImgPath = "Assets/Video/Image/Haku_Dialogue_Clean.png";
+        TextureImporter ti = AssetImporter.GetAtPath(hakuImgPath) as TextureImporter;
+        if (ti != null && (ti.textureType != TextureImporterType.Sprite || ti.spriteImportMode != SpriteImportMode.Single))
+        {
+            ti.textureType = TextureImporterType.Sprite;
+            ti.spriteImportMode = SpriteImportMode.Single;
+            ti.alphaIsTransparency = true;
+            ti.SaveAndReimport();
+        }
+        Sprite hakuSprite = AssetDatabase.LoadAssetAtPath<Sprite>(hakuImgPath);
+
         GameObject welcomeObj = CreateUIElement("Panel_Welcome", canvasObj.transform);
         StretchFull(welcomeObj.GetComponent<RectTransform>());
+        
+        // Nền tối mờ toàn màn hình
         Image welcomeBackdrop = welcomeObj.AddComponent<Image>();
         if (whiteSprite != null) welcomeBackdrop.sprite = whiteSprite;
-        welcomeBackdrop.color = new Color(0.02f, 0.05f, 0.12f, 0.72f);
+        welcomeBackdrop.color = new Color(0.01f, 0.01f, 0.02f, 0.96f);
 
-        // Khung ngoài màu xanh tươi mát phong cách Sóc Nhí
-        GameObject welcomeCard = CreateUIElement("WelcomeCard", welcomeObj.transform);
-        RectTransform wCardRt = welcomeCard.GetComponent<RectTransform>();
-        SetAnchors(wCardRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(820f, 520f));
-        Image wCardImg = welcomeCard.AddComponent<Image>();
-        if (whiteSprite != null) wCardImg.sprite = whiteSprite;
-        wCardImg.color = new Color(0.25f, 0.68f, 0.98f, 1f); // Xanh dương tươi sáng
+        // Nút bấm vô hình bao trùm toàn màn hình để người chơi click bất kỳ đâu cũng next câu
+        Button screenClickBtn = welcomeObj.AddComponent<Button>();
+        screenClickBtn.transition = Selectable.Transition.None;
 
-        // Viền bóng đổ
-        Outline cardOutline = welcomeCard.AddComponent<Outline>();
-        cardOutline.effectColor = new Color(0.12f, 0.45f, 0.75f, 0.9f);
-        cardOutline.effectDistance = new Vector2(6, -6);
+        // Container giữ đúng tỷ lệ hình nền Haku (1024x554 hoặc Fullscreen)
+        GameObject cutsceneContainer = CreateUIElement("Cutscene_Haku", welcomeObj.transform);
+        StretchFull(cutsceneContainer.GetComponent<RectTransform>());
+        Image hakuImg = cutsceneContainer.AddComponent<Image>();
+        if (hakuSprite != null) hakuImg.sprite = hakuSprite;
+        hakuImg.preserveAspect = true;
 
-        // Khung nền trắng sáng bên trong
-        GameObject wInner = CreateUIElement("InnerWhiteCard", welcomeCard.transform);
-        RectTransform wInnerRt = wInner.GetComponent<RectTransform>();
-        SetAnchors(wInnerRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -22f), new Vector2(780f, 440f));
-        Image wInnerImg = wInner.AddComponent<Image>();
-        if (whiteSprite != null) wInnerImg.sprite = whiteSprite;
-        wInnerImg.color = new Color(0.98f, 1f, 1f, 1f);
+        // Khung hiển thị nội dung câu thoại (TextMeshPro) nằm đúng vị trí khung chat
+        GameObject dialogueTextObj = CreateUIElement("Text_DialogueContent", cutsceneContainer.transform);
+        RectTransform dtRt = dialogueTextObj.GetComponent<RectTransform>();
+        // Căn đúng vào vùng lòng khung thoại: x từ 17% đến 84%, y từ 10% đến 25%
+        dtRt.anchorMin = new Vector2(0.17f, 0.095f);
+        dtRt.anchorMax = new Vector2(0.84f, 0.245f);
+        dtRt.offsetMin = Vector2.zero;
+        dtRt.offsetMax = Vector2.zero;
 
-        // Dải ruy băng Header
-        GameObject wHeaderBanner = CreateUIElement("HeaderBanner", welcomeCard.transform);
-        RectTransform wHBRt = wHeaderBanner.GetComponent<RectTransform>();
-        SetAnchors(wHBRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(620f, 60f));
-        Image hbImg = wHeaderBanner.AddComponent<Image>();
-        if (whiteSprite != null) hbImg.sprite = whiteSprite;
-        hbImg.color = new Color(1f, 0.62f, 0.15f, 1f); // Cam nắng ấm áp
+        TextMeshProUGUI dialogueTmp = AddCrispTMP(dialogueTextObj);
+        dialogueTmp.fontSize = 27;
+        dialogueTmp.lineSpacing = 14;
+        dialogueTmp.alignment = TextAlignmentOptions.TopLeft;
+        dialogueTmp.color = new Color(0.96f, 0.91f, 0.82f, 1f); // Màu kem ngà phong cách visual novel
+        dialogueTmp.enableWordWrapping = true;
+        dialogueTmp.text = "";
 
-        Outline hbOutline = wHeaderBanner.AddComponent<Outline>();
-        hbOutline.effectColor = new Color(0.85f, 0.38f, 0.05f, 1f);
-        hbOutline.effectDistance = new Vector2(3, -3);
+        Shadow dtShadow = dialogueTextObj.AddComponent<Shadow>();
+        dtShadow.effectColor = new Color(0.05f, 0.02f, 0.02f, 0.85f);
+        dtShadow.effectDistance = new Vector2(1.5f, -1.5f);
 
-        // Tiêu đề
-        GameObject wTitle = CreateUIElement("Title", wHeaderBanner.transform);
-        StretchFull(wTitle.GetComponent<RectTransform>());
-        TextMeshProUGUI wTitleTmp = AddCrispTMP(wTitle);
-        wTitleTmp.text = "🎡 CÔNG VIÊN GIẢI TRÍ ROLLER COASTER 🎡";
-        wTitleTmp.fontSize = 24;
-        wTitleTmp.fontStyle = FontStyles.Bold;
-        wTitleTmp.alignment = TextAlignmentOptions.Center;
-        wTitleTmp.color = Color.white;
+        // Nút gợi ý TIẾP TỤC ▽ ở góc dưới bên phải
+        GameObject continuePromptObj = CreateUIElement("Prompt_TiepTuc", cutsceneContainer.transform);
+        RectTransform cpRt = continuePromptObj.GetComponent<RectTransform>();
+        cpRt.anchorMin = new Vector2(0.76f, 0.02f);
+        cpRt.anchorMax = new Vector2(0.93f, 0.08f);
+        cpRt.offsetMin = Vector2.zero;
+        cpRt.offsetMax = Vector2.zero;
 
-        // Nội dung chính
-        GameObject wContent = CreateUIElement("Content", wInner.transform);
-        RectTransform wContentRt = wContent.GetComponent<RectTransform>();
-        SetAnchors(wContentRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 55f), new Vector2(700f, 190f));
-        TextMeshProUGUI wContentTmp = AddCrispTMP(wContent);
-        wContentTmp.text = "<size=30><color=#0077CC><b>Chào mừng bạn đến với Công Viên Vui Chơi!</b></color></size>\n\n" +
-                          "Bạn có thể đến <b>Quầy Bán Vé</b> để chọn mua vé và trải nghiệm các trò chơi hấp dẫn tại công viên.\n\n" +
-                          "<size=22><color=#FF6600>★ Chúc bạn có một chuyến tham quan thật vui vẻ & tràn ngập tiếng cười! ★</color></size>";
-        wContentTmp.fontSize = 21;
-        wContentTmp.lineSpacing = 16;
-        wContentTmp.alignment = TextAlignmentOptions.Center;
-        wContentTmp.color = new Color(0.2f, 0.25f, 0.32f, 1f);
+        TextMeshProUGUI cpTmp = AddCrispTMP(continuePromptObj);
+        cpTmp.text = "TIẾP TỤC  ▼";
+        cpTmp.fontSize = 20;
+        cpTmp.fontStyle = FontStyles.Bold;
+        cpTmp.alignment = TextAlignmentOptions.MidlineRight;
+        cpTmp.color = new Color(0.96f, 0.78f, 0.42f, 1f); // Màu vàng cam ấm áp
 
-        // Nút Khám Phá Ngay
-        GameObject wBtnObj = CreateButton("Btn_KhamPha", wInner.transform, new Vector2(0.5f, 0f), new Vector2(0f, 55f), new Vector2(320f, 60f), new Color(0.18f, 0.72f, 0.35f, 1f));
-        SetButtonText(wBtnObj, "BẮT ĐẦU KHÁM PHÁ  ➔", 22, Color.white);
-        
-        Outline btnOutline = wBtnObj.AddComponent<Outline>();
-        btnOutline.effectColor = new Color(0.1f, 0.48f, 0.22f, 1f);
-        btnOutline.effectDistance = new Vector2(3, -3);
+        Shadow cpShadow = continuePromptObj.AddComponent<Shadow>();
+        cpShadow.effectColor = new Color(0.08f, 0.03f, 0.03f, 0.9f);
+        cpShadow.effectDistance = new Vector2(2f, -2f);
 
-        // Ghi chú phím tắt dưới nút
-        GameObject enterHint = CreateUIElement("EnterHint", wInner.transform);
-        SetAnchors(enterHint.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(400f, 26f));
-        TextMeshProUGUI ehTmp = AddCrispTMP(enterHint);
-        ehTmp.text = "(Nhấn Enter hoặc Click chuột để tiếp tục)";
-        ehTmp.fontSize = 16;
-        ehTmp.fontStyle = FontStyles.Italic;
-        ehTmp.alignment = TextAlignmentOptions.Center;
-        ehTmp.color = new Color(0.55f, 0.6f, 0.68f, 1f);
+        // Nguồn âm thanh click khi chuyển thoại
+        AudioSource audioSource = welcomeObj.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        AudioClip clickClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Video/Sound/YTSave_YouTube_Mouse-Click-Sound-Effect_Media_i0DON3AjhW4_009_128k.mp3");
+
+        // Gắn controller quản lý hội thoại
+        IntroDialogueController dialogueCtrl = welcomeObj.AddComponent<IntroDialogueController>();
+        dialogueCtrl.dialoguePanel = welcomeObj;
+        dialogueCtrl.backgroundImage = hakuImg;
+        dialogueCtrl.dialogueText = dialogueTmp;
+        dialogueCtrl.continuePrompt = continuePromptObj;
+        dialogueCtrl.fullScreenClickButton = screenClickBtn;
+        dialogueCtrl.typingSpeed = 0.032f;
+        dialogueCtrl.audioSource = audioSource;
+        dialogueCtrl.advanceSound = clickClip;
+        dialogueCtrl.dialogueLines = new string[]
+        {
+            "Chào bạn! Tôi là Haku, nhân viên của công viên này. Rất vui được đón tiếp bạn đến với thế giới giải trí kỳ thú!",
+            "Đầu tiên, bạn hãy tiến lại Quầy Bán Vé ngay phía trước để nhận vé tàu lượn siêu tốc nhé.",
+            "Sau khi có vé, hãy đi theo biển chỉ dẫn đến khu vực đường ray để bắt đầu chuyến đi. Chúc bạn có những phút giây thật tuyệt vời!"
+        };
 
         uiMgr.welcomePanel = welcomeObj;
-        uiMgr.welcomeCloseButton = wBtnObj.GetComponent<Button>();
+        uiMgr.welcomeCloseButton = null;
 
         // ==========================================
         // C. GIAO DIỆN CHỌN TRÒ CHƠI (6 Ô PHONG CÁCH SÓC NHÍ)

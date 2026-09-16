@@ -33,6 +33,13 @@ public class TicketBoothInteractable : MonoBehaviour
 
     private void FindPlayer()
     {
+        GameObject chihiro = GameObject.Find("Chihiro");
+        if (chihiro != null)
+        {
+            playerTransform = chihiro.transform;
+            return;
+        }
+
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null) playerTransform = player.transform;
     }
@@ -66,14 +73,23 @@ public class TicketBoothInteractable : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player") || other.GetComponentInParent<PlayerMovement>() != null)
+        if (IsPlayer(other))
             playerInTrigger = true;
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player") || other.GetComponentInParent<PlayerMovement>() != null)
+        if (IsPlayer(other))
             playerInTrigger = false;
+    }
+
+    private bool IsPlayer(Collider other)
+    {
+        if (other == null) return false;
+        if (other.CompareTag("Player") || other.transform.root.CompareTag("Player")) return true;
+        if (other.GetComponentInParent<AnimatorChihiro>() != null) return true;
+        if (other.GetComponentInParent<PlayerMovement>() != null) return true;
+        return false;
     }
 
     private void OnDrawGizmosSelected()

@@ -128,15 +128,6 @@ public static class GenshinMenuBuilder
         vp2.SetDirectAudioVolume(0, 1.0f);
         menuCtrl.transitionVideoPlayer = vp2;
 
-        // Tự động gán video 0909.mp4 nếu đã có trong project
-        VideoClip foundClip = AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Assets/Video/0909.mp4")
-            ?? AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Video/0909.mp4");
-        if (foundClip != null)
-        {
-            menuCtrl.idleVideoClip = foundClip;
-            vp1.clip = foundClip;
-        }
-
         Undo.RegisterCreatedObjectUndo(managerObj, "Create Menu Manager");
 
         // 6. Tạo Canvas UI

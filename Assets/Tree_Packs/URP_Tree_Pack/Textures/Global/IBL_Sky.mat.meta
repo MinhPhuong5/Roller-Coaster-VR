@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ec9e42d159176684fb6a0bc9034633f1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 253340
+  packageName: URP Tree Models
+  packageVersion: 1.2.3
+  assetPath: Assets/Tree_Packs/URP_Tree_Pack/Textures/Global/IBL_Sky.mat
+  uploadId: 864048

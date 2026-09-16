@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5655676b4ccb058459a052006cc68695
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 253340
+  packageName: URP Tree Models
+  packageVersion: 1.2.3
+  assetPath: Assets/Tree_Packs/URP_Tree_Pack/Models/URP_Tree_3/Materials/Trunk.mat
+  uploadId: 864048

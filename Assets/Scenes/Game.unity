@@ -99000,7 +99000,6 @@ MonoBehaviour:
   stationTime: 20.5
   numberOfLaps: 2
   seatSwitcher: {fileID: 996532614}
-  motionInverter: {fileID: 0}
   reloadSceneOnFinish: 0
   delayBeforeReload: 1
   currentState: 0
@@ -433377,7 +433376,6 @@ MonoBehaviour:
   stationTime: 0
   numberOfLaps: 2
   seatSwitcher: {fileID: 9119005815104791363}
-  motionInverter: {fileID: 0}
   reloadSceneOnFinish: 0
   delayBeforeReload: 1
   currentState: 0

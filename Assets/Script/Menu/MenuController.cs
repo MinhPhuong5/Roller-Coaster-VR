@@ -14,28 +14,39 @@ using TMPro;
 ///    - Thanh Loading xuất hiện chạy từ 0 đến 5 giây (0% -> 100%).
 /// 3. Sau khi chạy xong 5 giây:
 ///    - Xuất hiện màn hình sáng chói (hoặc chạy Video 2 chói sáng).
-///    - Chuyển thẳng vào cảnh Game.
+///    - Chuyển thẳng vào cảnh ParkScene.
 /// </summary>
 public class MenuController : MonoBehaviour
 {
     [Header("Cấu hình Cảnh")]
-    public string gameSceneName = "Game";
+    public string gameSceneName = "ParkScene";
 
     [Header("Thời gian Thanh Loading")]
     [Tooltip("Thời gian thanh loading chạy từ 0% đến 100% (mặc định 5 giây)")]
     public float loadingDuration = 5.0f;
 
-    [Header("=== KÉO FILE VIDEO VÀO ĐÂY ===")]
-    [Tooltip("Kéo file Video 1 (.mp4) nền nhạc vào ô này")]
+    [Header("=== VIDEO 1: MỞ ĐẦU ===")]
+    [Tooltip("Kéo video nền của Menu vào đây. Video phát cho đến khi người chơi bấm Start.")]
     public VideoClip idleVideoClip;
 
-    [Tooltip("Kéo file Video 2 (.mp4) chói sáng vào ô này (tùy chọn)")]
+    [Tooltip("Bật để Video 1 lặp liên tục trong lúc ở Menu.")]
+    public bool loopIdleVideo = true;
+
+    [Header("=== VIDEO 2: CHUYỂN CẢNH (TÙY CHỌN) ===")]
+    [Tooltip("Kéo Video 2 vào đây. Nó phát một lần sau thanh loading, trước khi vào ParkScene.")]
     public VideoClip transitionVideoClip;
 
     [Header("=== Component Video (Tự động kết nối) ===")]
     public VideoPlayer idleVideoPlayer;
     public VideoPlayer transitionVideoPlayer;
     public GameObject transitionVideoDisplay;
+
+    [Header("=== ÂM THANH KHI BẤM START ===")]
+    [Tooltip("Kéo file âm thanh click/bắt đầu vào đây. Âm thanh phát một lần khi người chơi bấm Start.")]
+    public AudioClip startClickSound;
+
+    [Tooltip("AudioSource để phát âm thanh. Nếu để trống, script tự dùng hoặc tạo AudioSource trên MenuController_Manager.")]
+    public AudioSource startClickAudioSource;
 
     [Header("=== Giao diện Menu ===")]
     public GameObject allMenuUIContainer; // Cụm chữ Menu (START GAME, nhập tên...)
@@ -51,9 +62,21 @@ public class MenuController : MonoBehaviour
     public float whiteFlashFadeDuration = 0.8f;
 
     private bool isTransitioning = false;
+    private AsyncOperation preloadedSceneLoad;
+    private ThreadPriority previousBackgroundLoadingPriority;
+    private bool backgroundLoadingPriorityChanged;
 
     void Start()
     {
+        if (startClickAudioSource == null)
+        {
+            startClickAudioSource = GetComponent<AudioSource>();
+            if (startClickAudioSource == null)
+            {
+                startClickAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
         // Khởi chạy Video 1
         if (idleVideoPlayer != null)
         {
@@ -62,7 +85,7 @@ public class MenuController : MonoBehaviour
                 idleVideoPlayer.clip = idleVideoClip;
             }
 
-            idleVideoPlayer.isLooping = true;
+            idleVideoPlayer.isLooping = loopIdleVideo;
             idleVideoPlayer.Play();
         }
 
@@ -85,19 +108,14 @@ public class MenuController : MonoBehaviour
             whiteFlashCanvasGroup.blocksRaycasts = false;
         }
 
-        // Chuẩn bị trước Video 2 nếu có
-        if (transitionVideoPlayer != null)
+        // Chuẩn bị trước Video 2 nếu dùng một VideoPlayer riêng.
+        // Không gán clip vào đây khi hai ô Video Player cùng trỏ đến một component,
+        // vì sẽ làm Video 1 bị thay thế ngay khi Menu mở.
+        if (transitionVideoPlayer != null && transitionVideoPlayer != idleVideoPlayer && transitionVideoClip != null)
         {
-            if (transitionVideoClip != null)
-            {
-                transitionVideoPlayer.clip = transitionVideoClip;
-            }
-
-            if (transitionVideoPlayer.clip != null)
-            {
-                transitionVideoPlayer.isLooping = false;
-                transitionVideoPlayer.Prepare();
-            }
+            transitionVideoPlayer.clip = transitionVideoClip;
+            transitionVideoPlayer.isLooping = false;
+            transitionVideoPlayer.Prepare();
         }
 
         // Tải lại tên đã lưu
@@ -109,6 +127,9 @@ public class MenuController : MonoBehaviour
                 nameInputField.text = savedName;
             }
         }
+
+        // Tải ParkScene từ lúc Menu đã hiện để cú bấm Start không phải bắt đầu tải asset nặng.
+        StartCoroutine(PreloadParkScene());
     }
 
     void Update()
@@ -132,6 +153,42 @@ public class MenuController : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        if (backgroundLoadingPriorityChanged)
+        {
+            Application.backgroundLoadingPriority = previousBackgroundLoadingPriority;
+        }
+    }
+
+    private IEnumerator PreloadParkScene()
+    {
+        // Không chặn frame đầu tiên của Menu.
+        yield return null;
+        BeginScenePreload();
+    }
+
+    private AsyncOperation BeginScenePreload()
+    {
+        if (preloadedSceneLoad != null)
+        {
+            return preloadedSceneLoad;
+        }
+
+        // Hạn chế thời gian Unity tích hợp asset vào main thread để video vẫn mượt.
+        previousBackgroundLoadingPriority = Application.backgroundLoadingPriority;
+        Application.backgroundLoadingPriority = ThreadPriority.Low;
+        backgroundLoadingPriorityChanged = true;
+
+        preloadedSceneLoad = SceneManager.LoadSceneAsync(gameSceneName);
+        if (preloadedSceneLoad != null)
+        {
+            preloadedSceneLoad.allowSceneActivation = false;
+        }
+
+        return preloadedSceneLoad;
+    }
+
     /// <summary>
     /// Bấm vào bất kỳ đâu trên màn hình để bắt đầu quá trình load
     /// </summary>
@@ -139,6 +196,11 @@ public class MenuController : MonoBehaviour
     {
         if (isTransitioning) return;
         isTransitioning = true;
+
+        if (startClickSound != null && startClickAudioSource != null)
+        {
+            startClickAudioSource.PlayOneShot(startClickSound);
+        }
 
         // Lưu tên người chơi
         if (nameInputField != null && !string.IsNullOrEmpty(nameInputField.text))
@@ -153,26 +215,27 @@ public class MenuController : MonoBehaviour
 
     private IEnumerator StartLoadingSequence()
     {
-        // 1. Chữ Menu biến mất (Video nền sau vẫn giữ nguyên và tiếp tục chạy)
+        // 1. Hiện loading trước để người chơi thấy phản hồi ngay lập tức.
         if (allMenuUIContainer != null)
         {
             allMenuUIContainer.SetActive(false);
         }
 
-        // Bắt đầu tải ngầm trước cảnh Game
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(gameSceneName);
-        if (asyncLoad != null)
-        {
-            asyncLoad.allowSceneActivation = false;
-        }
-
-        // 2. Bật thanh Loading xuất hiện
         if (loadingUIContainer != null)
         {
             loadingUIContainer.SetActive(true);
         }
+        if (loadingFillBar != null) loadingFillBar.fillAmount = 0f;
+        if (loadingText != null) loadingText.text = "Loading... 0%";
 
-        // Chạy thanh loading từ từ 0 đến 5 giây (0% -> 100%)
+        // Cho Unity một frame để vẽ loading UI trước các thao tác có thể chặn main thread.
+        yield return null;
+
+        // ParkScene đã được tải nền từ khi mở Menu. Nếu người chơi bấm quá nhanh,
+        // bắt đầu tải tại đây sau khi loading UI đã được vẽ.
+        AsyncOperation asyncLoad = BeginScenePreload();
+
+        // 2. Chạy thanh loading từ từ 0 đến 5 giây (0% -> 100%).
         float timer = 0f;
         while (timer < loadingDuration)
         {
@@ -247,7 +310,7 @@ public class MenuController : MonoBehaviour
             yield return new WaitForSeconds(0.3f);
         }
 
-        // 4. Bước vào Game
+        // 4. Bước vào ParkScene
         if (asyncLoad != null)
         {
             while (asyncLoad.progress < 0.9f)

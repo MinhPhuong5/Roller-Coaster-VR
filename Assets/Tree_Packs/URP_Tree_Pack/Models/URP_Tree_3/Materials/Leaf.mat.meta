@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6a3720bc3012dca4fbea486b3c6854dd
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 253340
+  packageName: URP Tree Models
+  packageVersion: 1.2.3
+  assetPath: Assets/Tree_Packs/URP_Tree_Pack/Models/URP_Tree_3/Materials/Leaf.mat
+  uploadId: 864048

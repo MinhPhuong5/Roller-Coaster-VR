@@ -7,6 +7,10 @@ public class AnimatorChihiro : MonoBehaviour
 {
     [Header("Di chuyển")]
     public float moveSpeed = 5f;
+    [Tooltip("Tốc độ tối đa khi giữ Shift và di chuyển tiến")]
+    public float sprintSpeed = 100f;
+    [Tooltip("Tốc độ tăng khi chạy nước rút, tính theo đơn vị mỗi giây")]
+    public float sprintAcceleration = 80f;
     [Tooltip("Tốc độ rẽ trái/phải, tính theo độ mỗi giây")]
     public float turnSpeed = 540f;
     [Tooltip("Bỏ qua nhiễu nhỏ từ joystick để nhân vật không tự xoay")]
@@ -34,6 +38,8 @@ public class AnimatorChihiro : MonoBehaviour
     private bool jumpRequested;
     private float moveInput;
     private float turnInput;
+    private bool isSprinting;
+    private float currentMoveSpeed;
     private bool isJumping;
     private bool isForwardJump;
     private float jumpTimeRemaining;
@@ -44,6 +50,7 @@ public class AnimatorChihiro : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
         characterCollider = GetComponent<Collider>();
+        currentMoveSpeed = moveSpeed;
 
         // Nhân vật phải là Rigidbody động thì MovePosition và AddForce mới hoạt động.
         rb.isKinematic = false;
@@ -64,6 +71,8 @@ public class AnimatorChihiro : MonoBehaviour
         // Tank controls: W/S tiến-lùi, A/D chỉ rẽ.
         moveInput = Input.GetAxisRaw("Vertical");
         turnInput = Input.GetAxisRaw("Horizontal");
+        isSprinting = moveInput > 0.001f &&
+                      (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
         if (Mathf.Abs(turnInput) < turnDeadZone)
         {
             turnInput = 0f;
@@ -106,10 +115,13 @@ public class AnimatorChihiro : MonoBehaviour
         }
 
         bool isWalking = !isJumping && Mathf.Abs(moveInput) > 0.001f;
+        currentMoveSpeed = isSprinting
+            ? Mathf.MoveTowards(currentMoveSpeed, sprintSpeed, sprintAcceleration * Time.fixedDeltaTime)
+            : moveSpeed;
         if (isWalking)
         {
             Vector3 direction = rb.rotation * Vector3.forward;
-            rb.MovePosition(rb.position + direction * (moveInput * moveSpeed * Time.fixedDeltaTime));
+            rb.MovePosition(rb.position + direction * (moveInput * currentMoveSpeed * Time.fixedDeltaTime));
         }
 
         if (animator != null)

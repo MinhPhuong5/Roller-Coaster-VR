@@ -106,11 +106,14 @@ public class TicketShopUIManager : MonoBehaviour
         StyleTicketUi();
         UpdateTicketDisplay();
 
-        // 4. Mở Popup Chào Mừng khi vừa vào Scene
-        if (welcomePanel != null)
+        // 4. Mở Popup Chào Mừng khi vừa vào Scene (nếu được kích hoạt)
+        if (welcomePanel != null && welcomePanel.activeSelf)
         {
-            welcomePanel.SetActive(true);
             LockPlayerMovement(true);
+        }
+        else
+        {
+            LockPlayerMovement(false);
         }
     }
 
@@ -123,12 +126,15 @@ public class TicketShopUIManager : MonoBehaviour
             return;
         }
 
-        // Nhấn Enter hoặc Space để đóng thông báo chào mừng nhanh
+        // Nhấn Enter hoặc Space để đóng thông báo chào mừng nhanh (nếu không dùng IntroDialogueController)
         if (welcomePanel != null && welcomePanel.activeSelf)
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+            if (welcomePanel.GetComponent<IntroDialogueController>() == null)
             {
-                CloseWelcome();
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+                {
+                    CloseWelcome();
+                }
             }
         }
     }
@@ -346,15 +352,18 @@ public class TicketShopUIManager : MonoBehaviour
         Color gold = new Color(1f, 0.69f, 0.24f, 1f);
         Color cream = new Color(1f, 0.94f, 0.82f, 1f);
 
-        SetImageColor(welcomePanel, "", new Color(0.01f, 0.02f, 0.05f, 0.84f));
-        SetImageColor(welcomePanel, "WelcomeCard", surface);
-        SetImageColor(welcomePanel, "WelcomeCard/InnerWhiteCard", card);
-        SetImageColor(welcomePanel, "WelcomeCard/HeaderBanner", gold);
-        SetImageColor(welcomePanel, "WelcomeCard/InnerWhiteCard/Btn_KhamPha", gold);
-        SetText(welcomePanel, "WelcomeCard/HeaderBanner/Title", Color.black);
-        SetText(welcomePanel, "WelcomeCard/InnerWhiteCard/Content", cream,
-            "<size=30><color=#FFE0A3><b>Chào mừng đến Công Viên Vui Chơi</b></color></size>\n\nĐến <b>Quầy Bán Vé</b> để chọn vé và bắt đầu hành trình của bạn.\n\n<size=22><color=#F6B74A>★ Một chuyến đi tuyệt vời đang chờ bạn ★</color></size>");
-        SetText(welcomePanel, "WelcomeCard/InnerWhiteCard/EnterHint", new Color(0.72f, 0.78f, 0.88f, 1f));
+        if (welcomePanel != null && welcomePanel.transform.Find("WelcomeCard") != null)
+        {
+            SetImageColor(welcomePanel, "", new Color(0.01f, 0.02f, 0.05f, 0.84f));
+            SetImageColor(welcomePanel, "WelcomeCard", surface);
+            SetImageColor(welcomePanel, "WelcomeCard/InnerWhiteCard", card);
+            SetImageColor(welcomePanel, "WelcomeCard/HeaderBanner", gold);
+            SetImageColor(welcomePanel, "WelcomeCard/InnerWhiteCard/Btn_KhamPha", gold);
+            SetText(welcomePanel, "WelcomeCard/HeaderBanner/Title", Color.black);
+            SetText(welcomePanel, "WelcomeCard/InnerWhiteCard/Content", cream,
+                "<size=30><color=#FFE0A3><b>Chào mừng đến Công Viên Vui Chơi</b></color></size>\n\nĐến <b>Quầy Bán Vé</b> để chọn vé và bắt đầu hành trình của bạn.\n\n<size=22><color=#F6B74A>★ Một chuyến đi tuyệt vời đang chờ bạn ★</color></size>");
+            SetText(welcomePanel, "WelcomeCard/InnerWhiteCard/EnterHint", new Color(0.72f, 0.78f, 0.88f, 1f));
+        }
 
         SetImageColor(shopPanel, "", new Color(0.01f, 0.02f, 0.05f, 0.86f));
         SetImageColor(shopPanel, "ShopFrame_SocNhiStyle", surface);

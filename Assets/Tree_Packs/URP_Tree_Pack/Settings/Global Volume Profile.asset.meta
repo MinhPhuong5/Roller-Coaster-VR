@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ca6bb682be9fc6a4db7edacf7ee83d22
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 253340
+  packageName: URP Tree Models
+  packageVersion: 1.2.3
+  assetPath: Assets/Tree_Packs/URP_Tree_Pack/Settings/Global Volume Profile.asset
+  uploadId: 864048
