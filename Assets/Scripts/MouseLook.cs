@@ -18,7 +18,7 @@ public class MouseLook : MonoBehaviour
         baseLocalRotation = transform.localRotation;
     }
 
-    void Update()
+    void LateUpdate()
     {
         // 1. Kiểm tra xem có được phép xoay không:
         // - Hoặc khi tàu đã chạy (chuột bị khóa cứng: CursorLockMode.Locked)

@@ -15,14 +15,8 @@ public class SeatSwitcher : MonoBehaviour
     [Header("Ride")]
     public RideController rideController;
 
-    [Header("Rào Chắn & Âm Thanh Ga")]
+    [Header("Rào Chắn Ga")]
     public StationGateController stationGate;
-    public AudioSource brakeAudioSource;
-
-    [Header("Audio Tàu Chạy")]
-    public AudioSource trackAudioSource;
-    public float minPitch = 0.8f;
-    public float maxPitch = 1.5f;
 
     [Header("UI")]
     public GameObject uiPanel;
@@ -35,14 +29,9 @@ public class SeatSwitcher : MonoBehaviour
     private bool isRiding = false;
     private bool isHandlingExit = false;
     private bool isGateAlreadyClosed = false;
-    private Vector3 lastRidePosition;
 
     void Start()
     {
-        if (trackAudioSource == null)
-            trackAudioSource = GetComponent<AudioSource>();
-
-        StopCoasterAudio();
         ForceBoardingMode();
 
         if (startButton != null)
@@ -51,24 +40,13 @@ public class SeatSwitcher : MonoBehaviour
 
     void Update()
     {
-        // 1. Phím chuyển ghế Tab chỉ nhận khi tàu đang đỗ ở ga và không trong quá trình xử lý ra/vào
+        // 1. Phím chuyển ghế Tab chỉ nhận khi tàu đang đỗ ở ga và không trong tiến trình xử lý
         if (rideController != null && rideController.currentState == RideController.RideState.WaitingAtStation)
         {
             if (!isRiding && !isHandlingExit && Input.GetKeyDown(KeyCode.Tab))
             {
                 NextSeat();
             }
-        }
-
-        // 2. Cập nhật Pitch theo vận tốc thực tế của tàu
-        if (isRiding && trackAudioSource != null && rideCamera != null && Time.deltaTime > 0f)
-        {
-            float distance = Vector3.Distance(rideCamera.transform.position, lastRidePosition);
-            float speed = distance / Time.deltaTime;
-            lastRidePosition = rideCamera.transform.position;
-
-            float speedRatio = Mathf.InverseLerp(1f, 30f, speed);
-            trackAudioSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
         }
     }
 
@@ -84,12 +62,14 @@ public class SeatSwitcher : MonoBehaviour
 
         currentSeatIndex = index;
 
-        rideCamera.transform.localPosition = seats[index].localPosition;
-        rideCamera.transform.localRotation = seats[index].localRotation;
+        // GHIM CHẶT CAMERA VÀO GHẾ ĐƯỢC CHỌN (Gắn làm con trực tiếp)
+        rideCamera.transform.SetParent(seats[index]);
+        rideCamera.transform.localPosition = Vector3.zero;
+        rideCamera.transform.localRotation = Quaternion.identity;
 
         if (rideCameraMouseLook != null)
         {
-            rideCameraMouseLook.ResetLook(rideCamera.transform.localRotation);
+            rideCameraMouseLook.ResetLook(Quaternion.identity);
         }
 
         EnterSeatedMode();
@@ -106,8 +86,6 @@ public class SeatSwitcher : MonoBehaviour
 
     private void ForceBoardingMode()
     {
-        StopCoasterAudio();
-
         if (mainCamera != null) mainCamera.SetActive(true);
         if (rideCamera != null) rideCamera.SetActive(false);
 
@@ -124,7 +102,7 @@ public class SeatSwitcher : MonoBehaviour
         if (rideCamera != null) rideCamera.SetActive(true);
     }
 
-    // ĐƯỢC GỌI TỪ RIDECONTROLLER KHI TÀU CHẠY ĐẾN ĐOẠN THẲNG TIẾP CẬN GA
+    // Được gọi từ RideController để hạ rào từ xa
     public void TriggerEarlyGateClose()
     {
         if (!isGateAlreadyClosed && stationGate != null)
@@ -134,7 +112,7 @@ public class SeatSwitcher : MonoBehaviour
         }
     }
 
-    // ĐƯỢC GỌI TỪ RIDECONTROLLER KHI TÀU ĐÃ CẬP BẾN DỪNG HẲN
+    // Được gọi từ RideController khi tàu dừng hẳn tại ga
     public void ExitCar()
     {
         if (!isHandlingExit && isRiding)
@@ -167,7 +145,7 @@ public class SeatSwitcher : MonoBehaviour
         // 2. Chờ đủ thời gian rào mở hẳn
         yield return new WaitForSeconds(gateOpenDelay);
 
-        // 3. Tàu bắt đầu lăn bánh
+        // 3. Tàu bắt đầu lăn bánh (RideController sẽ tự bật âm thanh 3 lớp)
         if (rideController != null)
         {
             rideController.StartRide();
@@ -175,31 +153,16 @@ public class SeatSwitcher : MonoBehaviour
 
         isRiding = true;
         isHandlingExit = false;
-
-        if (rideCamera != null)
-            lastRidePosition = rideCamera.transform.position;
-
-        if (trackAudioSource != null)
-        {
-            trackAudioSource.pitch = minPitch;
-            trackAudioSource.Play();
-        }
     }
 
     private IEnumerator HandleRideEndSequence()
     {
         isHandlingExit = true;
 
-        StopCoasterAudio();
-        if (brakeAudioSource != null)
-        {
-            brakeAudioSource.Play();
-        }
-
-        // Vì rào đã hạ đón đầu từ trước, người chơi chỉ cần nán lại 1.2s nhìn sân ga
+        // Rào đã hạ sẵn từ trước, nán lại 1.2s nhìn sân ga
         yield return new WaitForSeconds(1.2f);
 
-        // Cắt dứt điểm âm thanh rào nếu còn dư âm
+        // Dập âm thanh động cơ rào nếu còn sót
         if (stationGate != null && stationGate.gateAudioSource != null)
         {
             stationGate.gateAudioSource.Stop();
@@ -213,14 +176,6 @@ public class SeatSwitcher : MonoBehaviour
         if (rideController != null)
         {
             rideController.ResetToStation();
-        }
-    }
-
-    private void StopCoasterAudio()
-    {
-        if (trackAudioSource != null)
-        {
-            trackAudioSource.Stop();
         }
     }
 }
