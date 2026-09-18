@@ -10,13 +10,18 @@ public class CoasterFollower : MonoBehaviour
     [Header("2. Tàu thật")]
     public Transform realCart;
 
-    [Header("3. Hướng")]
-    public bool reverseDirection = false;
+    [Header("3. Thiết lập Reverse & Bám Ray")]
+    public bool reverseDirection = true;
 
-    [Header("4. Căn chỉnh vị trí bám ray (Tâm ray)")]
+    [Tooltip("Khoảng cách thời gian dò đầu tàu (Khuyên dùng: 0.04 đến 0.08)")]
+    public float leadTime = 0.06f;
+
+    public float rotationDamping = 35f;
+    public float positionDamping = 45f;
+
+    [Header("4. Căn chỉnh vị trí bám ray")]
     public float verticalOffset = -0.8f;
     public float horizontalOffset = 0f;
-    public float forwardOffset = 0f;
 
     [Header("5. Phối hợp với trạng thái chạy")]
     public RideController rideController;
@@ -41,9 +46,9 @@ public class CoasterFollower : MonoBehaviour
     {
         if (staticTrackRC == null || ghostShow == null || realCart == null) return;
 
-        // 1. TỌA ĐỘ VÀ GÓC RAY CHUẨN TỪ BLUFFTITLER (KHÔNG TỰ TÍNH LẠI HƯỚNG)
+        // 1. TỌA ĐỘ VÀ GÓC RAY CHUẨN TẠI VỊ TRÍ HIỆN TẠI
         Vector3 invPos = -(Quaternion.Inverse(ghostShow.localRotation) * ghostShow.localPosition);
-        Vector3 rawBasePos = staticTrackRC.TransformPoint(invPos);
+        Vector3 trackPos = staticTrackRC.TransformPoint(invPos);
 
         Quaternion rawTrackRot = staticTrackRC.rotation * Quaternion.Inverse(ghostShow.localRotation);
         if (reverseDirection)
@@ -51,11 +56,10 @@ public class CoasterFollower : MonoBehaviour
             rawTrackRot = rawTrackRot * Quaternion.Euler(0f, 180f, 0f);
         }
 
-        // 2. OFFSET BÁM THEO ĐÚNG HỆ TRỤC CỦA THANH RAY (KHÔNG BAO GIỜ BỊ VĂNG KHỎI RAY)
-        Vector3 targetPos = rawBasePos
+        // 2. TÍNH VỊ TRÍ ĐÍCH TỰA TRÊN MẶT RAY (DÙNG CHUẨN VERTICAL OFFSET)
+        Vector3 targetPos = trackPos
                           + (rawTrackRot * Vector3.up * verticalOffset)
-                          + (rawTrackRot * Vector3.right * horizontalOffset)
-                          + (rawTrackRot * Vector3.forward * forwardOffset);
+                          + (rawTrackRot * Vector3.right * horizontalOffset);
 
         bool isRiding = (rideController != null && rideController.currentState == RideController.RideState.Riding);
 
@@ -66,18 +70,15 @@ public class CoasterFollower : MonoBehaviour
             realCart.position = targetPos;
             realCart.rotation = rawTrackRot;
             isInitialized = isRiding;
-        }
-        else
-        {
-            // 3. KHỬ RUNG ĐỈNH DỐC BẰNG BỘ LỌC TẦN SỐ CAO
-            // Bám sát vị trí và góc ray gốc nhưng làm phẳng các vi chấn micro-step
-            smoothedPos = Vector3.Lerp(smoothedPos, targetPos, Time.deltaTime * 35f);
-            smoothedRot = Quaternion.Slerp(smoothedRot, rawTrackRot, Time.deltaTime * 35f);
-
-            realCart.position = smoothedPos;
-            realCart.rotation = smoothedRot;
+            return;
         }
 
+        // 3. KHÓA GÓC QUAY VÀ VỊ TRÍ THEO RAY
+        smoothedPos = Vector3.Lerp(smoothedPos, targetPos, Time.deltaTime * positionDamping);
+        smoothedRot = Quaternion.Slerp(smoothedRot, rawTrackRot, Time.deltaTime * rotationDamping);
+
+        realCart.position = smoothedPos;
+        realCart.rotation = smoothedRot;
         realCart.localScale = initialScale;
     }
 }

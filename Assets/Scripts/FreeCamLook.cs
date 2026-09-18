@@ -21,7 +21,6 @@ public class FreeCamLook : MonoBehaviour
 
     void Update()
     {
-        // GIỮ CHUỘT PHẢI để xoay nhìn tự do xung quanh sân ga
         if (Input.GetMouseButton(1))
         {
             Cursor.visible = false;
@@ -38,7 +37,6 @@ public class FreeCamLook : MonoBehaviour
         }
         else if (Input.GetMouseButtonUp(1))
         {
-            // THẢ CHUỘT PHẢI: Trả lại con trỏ chuột bình thường để click bấm nút UI chọn ghế
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
         }

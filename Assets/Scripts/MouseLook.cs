@@ -20,15 +20,12 @@ public class MouseLook : MonoBehaviour
 
     void LateUpdate()
     {
-        // 1. Kiểm tra xem có được phép xoay không:
-        // - Hoặc khi tàu đã chạy (chuột bị khóa cứng: CursorLockMode.Locked)
-        // - Hoặc khi đang ngồi chờ ở ghế trước khi bấm Bắt đầu (nhấn giữ Chuột Phải)
+
         bool isLocked = (Cursor.lockState == CursorLockMode.Locked);
         bool isHoldingRightClick = Input.GetMouseButton(1);
 
         if (!isLocked && !isHoldingRightClick) return;
 
-        // 2. Nhận tín hiệu di chuột
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
