@@ -22,23 +22,21 @@ public class RideController : MonoBehaviour
     public CoasterFollower motionInverter;
 
     [Header("Đồ Thị Tốc Độ (Speed Curve)")]
-    [Tooltip("Đường cong tốc độ chuẩn của vòng 1 (có kéo dốc và khựng lại)")]
     public AnimationCurve speedCurve = new AnimationCurve();
-    [Tooltip("Hệ số nhân tốc độ tổng thể (1.0 là chuẩn)")]
     public float globalSpeedMultiplier = 1.0f;
 
     [Header("1. Lớp Tiếng Ray & Gió (Track & Wind Loop)")]
     public AudioSource trackWindAudio;
-    public float minPitch = 0.8f;   // Giữ tối thiểu 0.8 để tránh vỡ buffer DSP
+    public float minPitch = 0.8f;
     public float maxPitch = 1.6f;
     public float minVolume = 0.3f;
     public float maxVolume = 1.0f;
 
     [Header("2. Lớp Tiếng Lạch Cạch Xích Kéo (Chain Lift Loop)")]
     public AudioSource clankAudio;
-    public float liftStartProgress = 0.2f;          // Bắt đầu dốc 1
-    public float liftEndProgress = 10.5f;          // Kết thúc hẳn xích kéo dốc 1
-    public float liftFadeOutDuration = 1.2f;       // Thời gian mờ âm dần ở đỉnh dốc
+    public float liftStartProgress = 0.2f;
+    public float liftEndProgress = 10.2f;
+    public float liftFadeOutDuration = 0.8f;
     public float stationBrakeStartProgress = 86.5f;
     public float stationBrakeEndProgress = 89.8f;
 
@@ -57,7 +55,8 @@ public class RideController : MonoBehaviour
     private float traveledAnimationTime = 0f;
     private bool hasTriggeredEarlyGateClose = false;
 
-    private float ActualStationTime => Mathf.Max(0f, state != null ? state.length - stationTime : 0f);
+    public float CurrentTraveledTime => traveledAnimationTime;
+    public float ActualStationTime => Mathf.Max(0f, state != null ? state.length - stationTime : 0f);
 
     void Awake()
     {
@@ -90,22 +89,21 @@ public class RideController : MonoBehaviour
         if (currentState != RideState.Riding || state == null) return;
 
         float clipLength = state.length > 0f ? state.length : 90f;
-
         int currentLapIndex = Mathf.FloorToInt(traveledAnimationTime / clipLength);
         bool isFinalLap = (currentLapIndex >= numberOfLaps - 1);
         float currentLoopTime = traveledAnimationTime % clipLength;
 
-        // 1. TÍNH TOÁN TỐC ĐỘ THEO VÒNG
+        // 1. TÍNH TỐC ĐỘ REVERSE CHUẨN
         float targetSpeed = CalculateLapSpeed(currentLoopTime, currentLapIndex, isFinalLap);
-        targetSpeed = Mathf.Max(0.05f, targetSpeed * globalSpeedMultiplier);
+        targetSpeed = Mathf.Max(0.12f, targetSpeed * globalSpeedMultiplier);
 
         state.speed = -targetSpeed;
         traveledAnimationTime += Time.deltaTime * targetSpeed;
 
-        // 2. HÒA ÂM CHỐNG BỤP
+        // 2. HÒA ÂM
         UpdateLapAudio(targetSpeed, currentLoopTime, currentLapIndex, isFinalLap);
 
-        // 3. ĐÓNG RÀO GA SỚM Ở VÒNG CUỐI
+        // 3. ĐÓNG RÀO GA SỚM VÒNG CUỐI
         float startOfFinalLap = clipLength * (numberOfLaps - 1);
         if (isFinalLap && !hasTriggeredEarlyGateClose && traveledAnimationTime >= (startOfFinalLap + 10.0f))
         {
@@ -127,19 +125,13 @@ public class RideController : MonoBehaviour
     {
         if (currentLoopTime >= 86.0f)
         {
-            if (!isFinalLap)
-            {
-                return Mathf.Lerp(2.2f, 2.5f, (currentLoopTime - 86f) / 4f);
-            }
+            if (!isFinalLap) return Mathf.Lerp(2.2f, 2.5f, (currentLoopTime - 86f) / 4f);
             return speedCurve.Evaluate(currentLoopTime);
         }
 
         if (currentLoopTime <= 13.0f)
         {
-            if (lapIndex > 0)
-            {
-                return Mathf.Lerp(2.5f, 1.8f, currentLoopTime / 13.0f);
-            }
+            if (lapIndex > 0) return Mathf.Lerp(2.5f, 1.8f, currentLoopTime / 13.0f);
             return speedCurve.Evaluate(currentLoopTime);
         }
 
@@ -148,18 +140,13 @@ public class RideController : MonoBehaviour
 
     private void UpdateLapAudio(float currentSpeed, float currentLoopTime, int lapIndex, bool isFinalLap)
     {
-        // 1. Tiếng ray & gió: Giữ pitch và volume biến thiên mềm mại
         if (trackWindAudio != null)
         {
             float targetT = Mathf.InverseLerp(0.1f, 2.7f, currentSpeed);
-            float targetPitch = Mathf.Lerp(minPitch, maxPitch, targetT);
-            float targetVol = Mathf.Lerp(minVolume, maxVolume, targetT);
-
-            trackWindAudio.pitch = Mathf.MoveTowards(trackWindAudio.pitch, targetPitch, Time.deltaTime * 0.8f);
-            trackWindAudio.volume = Mathf.MoveTowards(trackWindAudio.volume, targetVol, Time.deltaTime * 0.8f);
+            trackWindAudio.pitch = Mathf.MoveTowards(trackWindAudio.pitch, Mathf.Lerp(minPitch, maxPitch, targetT), Time.deltaTime * 0.8f);
+            trackWindAudio.volume = Mathf.MoveTowards(trackWindAudio.volume, Mathf.Lerp(minVolume, maxVolume, targetT), Time.deltaTime * 0.8f);
         }
 
-        // 2. Tiếng xích kéo (Loop liên tục nhưng fade êm dịu, triệt tiêu tiếng bụp)
         if (clankAudio != null)
         {
             bool inFirstLap = (lapIndex == 0);
@@ -167,23 +154,14 @@ public class RideController : MonoBehaviour
 
             if (inFirstLap && currentLoopTime >= liftStartProgress && currentLoopTime <= liftEndProgress)
             {
-                // Tính khoảng cách tới đỉnh dốc để fade-out mượt mà
                 float remainingLiftTime = liftEndProgress - currentLoopTime;
-                if (remainingLiftTime < liftFadeOutDuration)
-                {
-                    targetClankVolume = Mathf.Lerp(0f, 0.85f, remainingLiftTime / liftFadeOutDuration);
-                }
-                else
-                {
-                    targetClankVolume = 0.85f;
-                }
+                targetClankVolume = (remainingLiftTime < liftFadeOutDuration) ? Mathf.Lerp(0f, 0.85f, remainingLiftTime / liftFadeOutDuration) : 0.85f;
             }
             else if (isFinalLap && currentLoopTime >= stationBrakeStartProgress && currentLoopTime <= stationBrakeEndProgress)
             {
                 targetClankVolume = 0.6f;
             }
 
-            // Điều khiển phát/dừng dựa trên volume
             if (targetClankVolume > 0f)
             {
                 if (!clankAudio.isPlaying)
@@ -193,36 +171,25 @@ public class RideController : MonoBehaviour
                     clankAudio.pitch = 1.0f;
                     clankAudio.Play();
                 }
-                clankAudio.volume = Mathf.MoveTowards(clankAudio.volume, targetClankVolume, Time.deltaTime * 2.0f);
+                clankAudio.volume = Mathf.MoveTowards(clankAudio.volume, targetClankVolume, Time.deltaTime * 2.5f);
             }
-            else
+            else if (clankAudio.isPlaying)
             {
-                if (clankAudio.isPlaying)
-                {
-                    clankAudio.volume = Mathf.MoveTowards(clankAudio.volume, 0f, Time.deltaTime * 3.0f);
-                    if (clankAudio.volume <= 0.005f)
-                    {
-                        clankAudio.Stop();
-                    }
-                }
+                clankAudio.volume = Mathf.MoveTowards(clankAudio.volume, 0f, Time.deltaTime * 3.5f);
+                if (clankAudio.volume <= 0.005f) clankAudio.Stop();
             }
         }
 
-        // 3. Tiếng két phanh vào ga
-        if (brakeAudio != null && isFinalLap && !hasPlayedBrakeSqueal)
+        if (brakeAudio != null && isFinalLap && !hasPlayedBrakeSqueal && currentLoopTime >= brakeTriggerProgress)
         {
-            if (currentLoopTime >= brakeTriggerProgress)
-            {
-                hasPlayedBrakeSqueal = true;
-                brakeAudio.Play();
-            }
+            hasPlayedBrakeSqueal = true;
+            brakeAudio.Play();
         }
     }
 
     public void StartRide()
     {
         if (currentState != RideState.WaitingAtStation || state == null) return;
-
         traveledAnimationTime = 0f;
         hasTriggeredEarlyGateClose = false;
         hasPlayedBrakeSqueal = false;
@@ -234,9 +201,7 @@ public class RideController : MonoBehaviour
             trackWindAudio.volume = minVolume;
             trackWindAudio.Play();
         }
-
-        if (seatSwitcher != null)
-            seatSwitcher.HideUI();
+        if (seatSwitcher != null) seatSwitcher.HideUI();
     }
 
     private void FinishRide()
@@ -244,53 +209,40 @@ public class RideController : MonoBehaviour
         state.time = ActualStationTime;
         state.speed = 0f;
         anim.Sample();
-
         currentState = RideState.Finished;
 
         if (trackWindAudio != null) trackWindAudio.Stop();
         if (clankAudio != null) clankAudio.Stop();
-
-        if (seatSwitcher != null)
-            seatSwitcher.ExitCar();
-
-        if (reloadSceneOnFinish)
-        {
-            Invoke(nameof(ReloadScene), delayBeforeReload);
-        }
+        if (seatSwitcher != null) seatSwitcher.ExitCar();
+        if (reloadSceneOnFinish) Invoke(nameof(ReloadScene), delayBeforeReload);
     }
 
-    public void ResetToStation()
-    {
-        currentState = RideState.WaitingAtStation;
-    }
-
-    private void ReloadScene()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-    }
-
-    void Reset()
-    {
-        GenerateSpeedCurve();
-    }
+    public void ResetToStation() => currentState = RideState.WaitingAtStation;
+    private void ReloadScene() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    void Reset() => GenerateSpeedCurve();
 
     [ContextMenu("Tao Lai Do Thi Chuan")]
     public void GenerateSpeedCurve()
     {
         speedCurve = new AnimationCurve();
-        speedCurve.AddKey(new Keyframe(0f, 0.5f));
-        speedCurve.AddKey(new Keyframe(7.5f, 0.35f));
-        speedCurve.AddKey(new Keyframe(9.8f, 0.08f));
-        speedCurve.AddKey(new Keyframe(10.6f, 0.15f));
-        speedCurve.AddKey(new Keyframe(13.2f, 2.75f));
-        speedCurve.AddKey(new Keyframe(17.0f, 1.2f));
-        speedCurve.AddKey(new Keyframe(20.0f, 1.9f));
-        speedCurve.AddKey(new Keyframe(30.0f, 0.65f));
+        speedCurve.AddKey(new Keyframe(0f, 0.6f));
+        // Kéo dốc 1 vững vàng: tốc độ 0.8 ổn định
+        speedCurve.AddKey(new Keyframe(2.0f, 0.8f));
+        speedCurve.AddKey(new Keyframe(8.0f, 0.8f));
+        speedCurve.AddKey(new Keyframe(9.5f, 0.45f));
+        // Đỉnh dốc khựng lại hồi hộp
+        speedCurve.AddKey(new Keyframe(9.9f, 0.18f));
+        speedCurve.AddKey(new Keyframe(10.4f, 0.35f));
+        // Lao dốc 1 cực đã
+        speedCurve.AddKey(new Keyframe(12.8f, 2.85f));
+        speedCurve.AddKey(new Keyframe(17.0f, 1.3f));
+        speedCurve.AddKey(new Keyframe(20.0f, 2.0f));
+        speedCurve.AddKey(new Keyframe(30.0f, 0.7f));
         speedCurve.AddKey(new Keyframe(35.5f, 2.4f));
         speedCurve.AddKey(new Keyframe(45.0f, 1.7f));
         speedCurve.AddKey(new Keyframe(54.0f, 1.8f));
         speedCurve.AddKey(new Keyframe(62.0f, 2.0f));
-        speedCurve.AddKey(new Keyframe(74.0f, 0.55f));
+        speedCurve.AddKey(new Keyframe(74.0f, 0.6f));
         speedCurve.AddKey(new Keyframe(80.0f, 2.7f));
         speedCurve.AddKey(new Keyframe(85.5f, 2.3f));
         speedCurve.AddKey(new Keyframe(87.0f, 0.9f));
