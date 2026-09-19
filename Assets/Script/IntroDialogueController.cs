@@ -8,6 +8,7 @@ using TMPro;
 public class IntroDialogueController : MonoBehaviour
 {
     public static IntroDialogueController Instance { get; private set; }
+    public static bool GameStarted { get; private set; }
 
     [Header("UI References")]
     [Tooltip("Panel chính chứa toàn bộ cảnh hội thoại")]
@@ -53,9 +54,17 @@ public class IntroDialogueController : MonoBehaviour
     private void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        GameStarted = false;
 
         if (dialoguePanel == null) dialoguePanel = gameObject;
+        ConfigureSeamlessSky();
+        AddCloudDrift();
     }
 
     private void Start()
@@ -83,11 +92,6 @@ public class IntroDialogueController : MonoBehaviour
             Input.GetMouseButtonDown(0))
         {
             OnUserAdvance();
-        }
-        else if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            // Bấm Escape để bỏ qua hội thoại nhanh
-            EndDialogue();
         }
     }
 
@@ -163,6 +167,7 @@ public class IntroDialogueController : MonoBehaviour
             isTyping = false;
             if (dialogueText != null) dialogueText.text = currentFullText;
             if (continuePrompt != null) continuePrompt.SetActive(true);
+            PlaySound();
             return;
         }
 
@@ -186,6 +191,7 @@ public class IntroDialogueController : MonoBehaviour
         if (typingCoroutine != null) StopCoroutine(typingCoroutine);
         isTyping = false;
 
+        GameStarted = true;
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
 
         // Mở khóa cho player di chuyển
@@ -208,6 +214,29 @@ public class IntroDialogueController : MonoBehaviour
         }
     }
 
+    private static void ConfigureSeamlessSky()
+    {
+        GameObject lowCloudPlane = GameObject.Find("Cloud_Sky_Low");
+        if (lowCloudPlane != null) lowCloudPlane.SetActive(false);
+
+        GameObject highCloudPlane = GameObject.Find("Cloud_Sky_High");
+        if (highCloudPlane != null) highCloudPlane.SetActive(false);
+
+    }
+
+    private static void AddCloudDrift()
+    {
+        foreach (GameObject cloud in UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+        {
+            string name = cloud.name.ToLowerInvariant();
+            if (cloud.transform.parent == null && (name == "cloud" || name.StartsWith("cloud (")) &&
+                cloud.GetComponent<CloudDrift>() == null)
+            {
+                cloud.AddComponent<CloudDrift>();
+            }
+        }
+    }
+
     private void LockPlayer(bool isLocked)
     {
         PlayerMovement pm = UnityEngine.Object.FindFirstObjectByType<PlayerMovement>();
@@ -215,6 +244,9 @@ public class IntroDialogueController : MonoBehaviour
 
         AnimatorChihiro ac = UnityEngine.Object.FindFirstObjectByType<AnimatorChihiro>();
         if (ac != null) ac.enabled = !isLocked;
+
+        ShiftOrbitCamera cameraControl = UnityEngine.Object.FindFirstObjectByType<ShiftOrbitCamera>();
+        if (cameraControl != null) cameraControl.enabled = !isLocked;
 
         if (isLocked)
         {

@@ -43,6 +43,7 @@ public class AnimatorChihiro : MonoBehaviour
     private bool isJumping;
     private bool isForwardJump;
     private float jumpTimeRemaining;
+    private bool controlsLocked;
     private readonly HashSet<Collider> groundContacts = new HashSet<Collider>();
 
     private void Start()
@@ -64,10 +65,24 @@ public class AnimatorChihiro : MonoBehaviour
         {
             animator.applyRootMotion = false;
         }
+
+        Camera playerCamera = GetComponentInChildren<Camera>(true);
+        if (playerCamera != null && playerCamera.GetComponent<ShiftOrbitCamera>() == null)
+        {
+            playerCamera.gameObject.AddComponent<ShiftOrbitCamera>();
+        }
     }
 
     private void Update()
     {
+        if (controlsLocked)
+        {
+            moveInput = 0f;
+            turnInput = 0f;
+            jumpRequested = false;
+            return;
+        }
+
         // Tank controls: W/S tiến-lùi, A/D chỉ rẽ.
         moveInput = Input.GetAxisRaw("Vertical");
         turnInput = Input.GetAxisRaw("Horizontal");
@@ -87,6 +102,16 @@ public class AnimatorChihiro : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (controlsLocked)
+        {
+            if (animator != null)
+            {
+                animator.SetBool(walkingParameter, false);
+                animator.SetBool(jumpingParameter, false);
+            }
+            return;
+        }
+
         bool groundedNow = IsStandingOnGround() || groundContacts.Count > 0;
         if (groundedNow && !isGrounded)
         {
@@ -186,6 +211,36 @@ public class AnimatorChihiro : MonoBehaviour
         if (animator != null)
         {
             animator.SetBool(jumpingParameter, value);
+        }
+    }
+
+    /// <summary>Khóa di chuyển khi nhân vật đang dùng một tương tác tại chỗ, ví dụ ngồi ghế.</summary>
+    public void SetControlsLocked(bool locked)
+    {
+        SetInputLocked(locked);
+
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (rb == null) return;
+
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.isKinematic = locked;
+    }
+
+    /// <summary>Khóa phím điều khiển cho UI, nhưng vẫn để physics hoạt động bình thường.</summary>
+    public void SetInputLocked(bool locked)
+    {
+        controlsLocked = locked;
+        moveInput = 0f;
+        turnInput = 0f;
+        jumpRequested = false;
+        isJumping = false;
+        isForwardJump = false;
+
+        if (animator != null)
+        {
+            animator.SetBool(walkingParameter, false);
+            animator.SetBool(jumpingParameter, false);
         }
     }
 }

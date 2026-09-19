@@ -1623,7 +1623,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MenuController
   gameSceneName: ParkScene
-  loadingDuration: 5
+  loadingDuration: 6
   idleVideoClip: {fileID: 32900000, guid: 58a5821091ea7fc4ebc303ff72627340, type: 3}
   loopIdleVideo: 1
   transitionVideoClip: {fileID: 32900000, guid: b27d7b8fb73b8904d99d59bddf5c9050, type: 3}

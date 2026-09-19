@@ -45,6 +45,14 @@ public class TicketShopUIManager : MonoBehaviour
     public int ticketPrice = 50000; // Giá 50.000 VNĐ / vé
     public int currentTicketCount = 1;
     public int purchasedTickets = 0;
+    public int PurchasedTicketCount => purchasedTickets;
+
+    public bool ConsumeTicket()
+    {
+        if (purchasedTickets <= 0) return false;
+        purchasedTickets--;
+        return true;
+    }
 
     private Coroutine lockedNoticeCoroutine;
 
@@ -119,6 +127,13 @@ public class TicketShopUIManager : MonoBehaviour
 
     private void Update()
     {
+        // Hội thoại mở đầu phải chạy hết; không cho Esc đóng Welcome để bỏ qua game gate.
+        if (welcomePanel != null && welcomePanel.activeSelf &&
+            welcomePanel.GetComponent<IntroDialogueController>() != null)
+        {
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (welcomePanel != null && welcomePanel.activeSelf) CloseWelcome();

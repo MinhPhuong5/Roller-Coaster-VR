@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.Video;
 using TMPro;
 
 /// <summary>
@@ -36,12 +37,17 @@ public class RollerCoasterInteraction : MonoBehaviour
     [Tooltip("Build index của scene game chính (Mặc định: 2 cho scene thứ 3)")]
     public int mainGameSceneIndex = 2;
 
+    [Header("=== Video Chuyển Cảnh (Tùy Chọn) ===")]
+    [Tooltip("Kéo VideoClip vào đây. Video phủ toàn màn hình trước khi vào Scene 3.")]
+    public VideoClip transitionVideo;
+
     [Header("=== Trạng Thái Hiện Tại ===")]
     [SerializeField] private bool isPlayerInZone = false;
     [SerializeField] private bool isModalOpen = false;
 
     private CursorLockMode previousCursorLockMode;
     private bool previousCursorVisible;
+    private bool isStartingGame;
 
     private void Start()
     {
@@ -183,6 +189,80 @@ public class RollerCoasterInteraction : MonoBehaviour
     }
 
     public void OnConfirmStartGame()
+    {
+        if (isStartingGame) return;
+        isStartingGame = true;
+
+        if (transitionVideo != null)
+        {
+            StartCoroutine(PlayTransitionVideo());
+            return;
+        }
+
+        LoadMainGameScene();
+    }
+
+    private System.Collections.IEnumerator PlayTransitionVideo()
+    {
+        Camera targetCamera = Object.FindFirstObjectByType<Camera>();
+        if (targetCamera == null)
+        {
+            LoadMainGameScene();
+            yield break;
+        }
+
+        VideoPlayer player = gameObject.AddComponent<VideoPlayer>();
+        AudioSource audio = gameObject.AddComponent<AudioSource>();
+        player.source = VideoSource.VideoClip;
+        player.clip = transitionVideo;
+        player.renderMode = VideoRenderMode.CameraNearPlane;
+        player.targetCamera = targetCamera;
+        player.aspectRatio = VideoAspectRatio.FitHorizontally;
+        player.audioOutputMode = VideoAudioOutputMode.AudioSource;
+        player.controlledAudioTrackCount = 1;
+        player.playOnAwake = false;
+        player.isLooping = false;
+        audio.spatialBlend = 0f;
+
+        player.Prepare();
+        float prepareTimer = 0f;
+        while (!player.isPrepared && prepareTimer < 10f)
+        {
+            prepareTimer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (!player.isPrepared)
+        {
+            LoadMainGameScene();
+            yield break;
+        }
+
+        if (player.audioTrackCount > 0)
+        {
+            player.EnableAudioTrack(0, true);
+            player.SetTargetAudioSource(0, audio);
+        }
+
+        bool finished = false;
+        float playTimer = 0f;
+        float maxPlayTime = Mathf.Max((float)transitionVideo.length + 2f, 5f);
+        player.loopPointReached += OnVideoFinished;
+        player.Play();
+        while (!finished && playTimer < maxPlayTime)
+        {
+            playTimer += Time.unscaledDeltaTime;
+            yield return null;
+            finished = !player.isPlaying && player.time > 0d;
+        }
+
+        player.loopPointReached -= OnVideoFinished;
+        LoadMainGameScene();
+
+        void OnVideoFinished(VideoPlayer _) => finished = true;
+    }
+
+    private void LoadMainGameScene()
     {
         Debug.Log($"[RollerCoasterInteraction] Đang chuyển sang Scene game chính: {mainGameSceneName} (Index: {mainGameSceneIndex})...");
 
