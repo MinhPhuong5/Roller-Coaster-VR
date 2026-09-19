@@ -13,14 +13,20 @@ public class MouseLook : MonoBehaviour
     private float pitch = 0f;
     private Quaternion baseLocalRotation = Quaternion.identity;
 
-    void Start()
+    void OnEnable()
     {
-        baseLocalRotation = transform.localRotation;
+        // Tự tắt nếu đang cắm kính VR thật
+        if (UnityEngine.XR.XRSettings.isDeviceActive)
+        {
+            enabled = false;
+            return;
+        }
+
+        ResetLook(Quaternion.identity);
     }
 
     void LateUpdate()
     {
-
         bool isLocked = (Cursor.lockState == CursorLockMode.Locked);
         bool isHoldingRightClick = Input.GetMouseButton(1);
 
@@ -33,11 +39,10 @@ public class MouseLook : MonoBehaviour
         pitch -= mouseY;
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
 
-        // Giữ góc nhìn chuẩn đồng bộ với hướng ghế
+        // Giữ góc nhìn tương đối theo khoang ghế tàu
         transform.localRotation = baseLocalRotation * Quaternion.Euler(pitch, yaw, 0f);
     }
 
-    // Reset lại góc quay khi chuyển đổi giữa các ghế
     public void ResetLook(Quaternion newBaseLocalRotation)
     {
         baseLocalRotation = newBaseLocalRotation;
