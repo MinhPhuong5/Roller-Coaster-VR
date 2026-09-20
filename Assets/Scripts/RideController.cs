@@ -45,6 +45,15 @@ public class RideController : MonoBehaviour
     public float brakeTriggerProgress = 88.0f;
     private bool hasPlayedBrakeSqueal = false;
 
+    [Header("4. Quản lý UI Chuyển Cảnh & Hỏi Chơi Tiếp")]
+    public GameObject rideUIPanel;
+    public GameObject selectSeatGroup;
+    public GameObject gameOverGroup;
+
+    [Header("5. Dịch Chuyển Người Chơi Về Map")]
+    public GameObject xrOriginObject;
+    public Transform mapReturnPoint;
+
     [Header("Tùy chọn kết thúc")]
     public bool reloadSceneOnFinish = false;
     public float delayBeforeReload = 1f;
@@ -82,6 +91,10 @@ public class RideController : MonoBehaviour
         anim.Sample();
 
         currentState = RideState.WaitingAtStation;
+
+        // Đảm bảo khi mới vào chỉ hiện nhóm chọn ghế, ẩn nhóm hỏi chơi tiếp
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
+        if (gameOverGroup != null) gameOverGroup.SetActive(false);
     }
 
     void Update()
@@ -114,7 +127,7 @@ public class RideController : MonoBehaviour
             }
         }
 
-        // 4. VỀ ĐÍCH
+        // 4. VỀ ĐÍCH VÀ HIỆN BẢNG HỎI CHƠI TIẾP
         if (traveledAnimationTime >= clipLength * numberOfLaps)
         {
             FinishRide();
@@ -132,6 +145,18 @@ public class RideController : MonoBehaviour
         if (currentLoopTime <= 13.0f)
         {
             if (lapIndex > 0) return Mathf.Lerp(2.5f, 1.8f, currentLoopTime / 13.0f);
+
+            // Vòng đầu tiên: Xuất phát êm ái leo dốc
+            if (currentLoopTime < 5.5f)
+            {
+                return Mathf.Lerp(0.15f, 0.42f, currentLoopTime / 5.5f);
+            }
+
+            if (currentLoopTime <= 9.0f)
+            {
+                return 0.42f;
+            }
+
             return speedCurve.Evaluate(currentLoopTime);
         }
 
@@ -201,7 +226,9 @@ public class RideController : MonoBehaviour
             trackWindAudio.volume = minVolume;
             trackWindAudio.Play();
         }
+
         if (seatSwitcher != null) seatSwitcher.HideUI();
+        if (rideUIPanel != null) rideUIPanel.SetActive(false);
     }
 
     private void FinishRide()
@@ -214,7 +241,43 @@ public class RideController : MonoBehaviour
         if (trackWindAudio != null) trackWindAudio.Stop();
         if (clankAudio != null) clankAudio.Stop();
         if (seatSwitcher != null) seatSwitcher.ExitCar();
+
+        // Bật lại khung UI và hiển thị nhóm hỏi chơi tiếp
+        if (rideUIPanel != null) rideUIPanel.SetActive(true);
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
+        if (gameOverGroup != null) gameOverGroup.SetActive(true);
+
         if (reloadSceneOnFinish) Invoke(nameof(ReloadScene), delayBeforeReload);
+    }
+
+    // Gắn vào sự kiện nút CÓ (Btn_Yes)
+    public void OnClick_PlayAgain()
+    {
+        currentState = RideState.WaitingAtStation;
+        traveledAnimationTime = 0f;
+
+        // Đổi trạng thái UI: Ẩn bảng hỏi, hiện lại 4 nút chọn ghế
+        if (gameOverGroup != null) gameOverGroup.SetActive(false);
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
+    }
+
+    // Gắn vào sự kiện nút KHÔNG (Btn_No)
+    public void OnClick_ExitToMap()
+    {
+        // 1. Tắt toàn bộ bảng UI ga tàu
+        if (rideUIPanel != null) rideUIPanel.SetActive(false);
+
+        // 2. Dịch chuyển người chơi ra vị trí Map
+        if (xrOriginObject != null && mapReturnPoint != null)
+        {
+            CharacterController cc = xrOriginObject.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+
+            xrOriginObject.transform.position = mapReturnPoint.position;
+            xrOriginObject.transform.rotation = mapReturnPoint.rotation;
+
+            if (cc != null) cc.enabled = true;
+        }
     }
 
     public void ResetToStation() => currentState = RideState.WaitingAtStation;
@@ -225,15 +288,15 @@ public class RideController : MonoBehaviour
     public void GenerateSpeedCurve()
     {
         speedCurve = new AnimationCurve();
-        speedCurve.AddKey(new Keyframe(0f, 0.6f));
-        // Kéo dốc 1 vững vàng: tốc độ 0.8 ổn định
-        speedCurve.AddKey(new Keyframe(2.0f, 0.8f));
-        speedCurve.AddKey(new Keyframe(8.0f, 0.8f));
-        speedCurve.AddKey(new Keyframe(9.5f, 0.45f));
-        // Đỉnh dốc khựng lại hồi hộp
+
+        speedCurve.AddKey(new Keyframe(0f, 0.15f));
+        speedCurve.AddKey(new Keyframe(5.5f, 0.42f));
+        speedCurve.AddKey(new Keyframe(9.0f, 0.42f));
+        speedCurve.AddKey(new Keyframe(9.5f, 0.35f));
+
         speedCurve.AddKey(new Keyframe(9.9f, 0.18f));
         speedCurve.AddKey(new Keyframe(10.4f, 0.35f));
-        // Lao dốc 1 cực đã
+
         speedCurve.AddKey(new Keyframe(12.8f, 2.85f));
         speedCurve.AddKey(new Keyframe(17.0f, 1.3f));
         speedCurve.AddKey(new Keyframe(20.0f, 2.0f));
