@@ -30,6 +30,12 @@ public class SeatSwitcher : MonoBehaviour
     public GameObject uiPanel;
     public GameObject startButton;
 
+    [Header("Tùy Chọn Đếm Ngược (Setup Trên Inspector)")]
+    [Tooltip("Tích chọn để hiển thị chữ 3.. 2.. 1.. GO!")]
+    public bool useCountdownText = true;
+    [Tooltip("Tích chọn để phát âm thanh đếm ngược")]
+    public bool useCountdownAudio = true;
+
     [Header("Đếm Ngược Bắt Đầu")]
     public TextMeshProUGUI countdownText;
     public int countdownSeconds = 3;
@@ -189,47 +195,58 @@ public class SeatSwitcher : MonoBehaviour
     {
         isGateAlreadyClosed = false;
 
-        // 1. Mở rào ga
+        // 1. Mở rào chắn ga
         if (stationGate != null)
         {
             stationGate.OpenGate();
         }
 
-        // 2. Chờ mở rào
-        float waitBeforeCountdown = Mathf.Max(0f, gateOpenDelay - countdownSeconds);
-        if (waitBeforeCountdown > 0f)
-        {
-            yield return new WaitForSeconds(waitBeforeCountdown);
-        }
+        bool hasCountdown = useCountdownText || useCountdownAudio;
 
-        // 3. Phát âm thanh Countdown
-        if (countdownAudio != null)
+        if (hasCountdown)
         {
-            countdownAudio.Play();
-        }
-
-        // 4. Đồng bộ chữ hiển thị 3... 2... 1... GO!
-        if (countdownText != null)
-        {
-            countdownText.gameObject.SetActive(true);
-            for (int i = countdownSeconds; i > 0; i--)
+            // Chờ mở rào trước một khoảng thời gian (gateOpenDelay - countdownSeconds)
+            float waitBeforeCountdown = Mathf.Max(0f, gateOpenDelay - countdownSeconds);
+            if (waitBeforeCountdown > 0f)
             {
-                countdownText.text = i.ToString();
-                yield return new WaitForSeconds(1.0f);
+                yield return new WaitForSeconds(waitBeforeCountdown);
             }
-            countdownText.text = "GO!";
-            yield return new WaitForSeconds(0.6f);
-            countdownText.gameObject.SetActive(false);
+
+            // Phát âm thanh đếm ngược nếu được tích chọn
+            if (useCountdownAudio && countdownAudio != null)
+            {
+                countdownAudio.Play();
+            }
+
+            // Hiển thị chữ đếm ngược nếu được tích chọn
+            if (useCountdownText && countdownText != null)
+            {
+                countdownText.gameObject.SetActive(true);
+                for (int i = countdownSeconds; i > 0; i--)
+                {
+                    countdownText.text = i.ToString();
+                    yield return new WaitForSeconds(1.0f);
+                }
+                countdownText.text = "GO!";
+                yield return new WaitForSeconds(0.6f);
+                countdownText.gameObject.SetActive(false);
+            }
+            else
+            {
+                // Nếu chỉ bật tiếng mà tắt chữ: chờ đúng khoảng thời gian bằng countdownSeconds
+                yield return new WaitForSeconds(Mathf.Min(gateOpenDelay, (float)countdownSeconds));
+            }
         }
         else
         {
-            yield return new WaitForSeconds(Mathf.Min(gateOpenDelay, (float)countdownSeconds));
+            // NẾU TẮT CẢ TIẾNG LẪN CHỮ: Chờ đủ đúng gateOpenDelay để rào mở xong hoàn toàn
+            yield return new WaitForSeconds(gateOpenDelay);
         }
 
-        // 5. Khóa controller VR
+        // 2. Khóa controller VR
         SetControllersActive(false);
 
-        // 6. Tàu lăn bánh
+        // 3. Tàu bắt đầu lăn bánh
         if (rideController != null)
         {
             rideController.StartRide();

@@ -218767,6 +218767,8 @@ MonoBehaviour:
   stationGate: {fileID: 1773515496}
   uiPanel: {fileID: 990860292}
   startButton: {fileID: 656162330}
+  useCountdownText: 0
+  useCountdownAudio: 0
   countdownText: {fileID: 494408712}
   countdownSeconds: 3
   countdownAudio: {fileID: 2117645756}
