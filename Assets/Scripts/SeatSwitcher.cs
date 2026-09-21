@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class SeatSwitcher : MonoBehaviour
 {
@@ -287,5 +288,34 @@ public class SeatSwitcher : MonoBehaviour
     {
         if (leftController != null) leftController.SetActive(isActive);
         if (rightController != null) rightController.SetActive(isActive);
+    }
+
+    public void ReturnToParkMap()
+    {
+        Time.timeScale = 1f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // Ghi nhận cờ để ParkScene nhận biết vừa đi tàu lượn xong
+        PlayerPrefs.SetInt("HasPlayedCoaster", 1);
+        PlayerPrefs.Save();
+
+        // Nạp Scene bất đồng bộ để tránh khựng khung hình
+        StartCoroutine(LoadParkSceneAsyncRoutine());
+    }
+
+    private IEnumerator LoadParkSceneAsyncRoutine()
+    {
+        // Hạn chế việc load asset chiếm quyền luồng chính
+        Application.backgroundLoadingPriority = ThreadPriority.Low;
+
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync("ParkScene");
+
+        while (!asyncLoad.isDone)
+        {
+            yield return null;
+        }
+
+        Application.backgroundLoadingPriority = ThreadPriority.Normal;
     }
 }

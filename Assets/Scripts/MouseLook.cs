@@ -15,13 +15,6 @@ public class MouseLook : MonoBehaviour
 
     void OnEnable()
     {
-        // Tự tắt nếu đang cắm kính VR thật
-        if (UnityEngine.XR.XRSettings.isDeviceActive)
-        {
-            enabled = false;
-            return;
-        }
-
         ResetLook(Quaternion.identity);
     }
 
