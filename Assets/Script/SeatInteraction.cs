@@ -6,6 +6,7 @@ using UnityEngine;
 public class SeatInteraction : MonoBehaviour
 {
     public static bool IsPlayerSitting { get; private set; }
+    private static SeatInteraction activeSeat;
     [Header("Điểm đặt nhân vật")]
     public Transform seatPoint;
     public Transform exitPoint;
@@ -42,6 +43,9 @@ public class SeatInteraction : MonoBehaviour
         if (playerCamera == null && playerTransform != null)
             playerCamera = playerTransform.GetComponentInChildren<ShiftOrbitCamera>(true);
 
+        // Several benches share one prompt UI. Only the trigger containing the player may use it or receive F.
+        if (!isSitting && activeSeat != this) return;
+
         if (isSitting)
         {
             SetPrompt(true, leavePrompt);
@@ -75,8 +79,9 @@ public class SeatInteraction : MonoBehaviour
         playerCamera?.SetPositionOverride(null);
         yield return new WaitForSeconds(leaveDelay);
 
-        // exitPoint is placed just above the ground and avoids putting the Rigidbody inside the seat or floor.
-        playerTransform.SetPositionAndRotation(exitPoint.position, exitPoint.rotation);
+        // Use the safe exit position, but keep the player upright even if the empty exit marker is rotated.
+        Quaternion uprightExitRotation = Quaternion.Euler(0f, exitPoint.eulerAngles.y, 0f);
+        playerTransform.SetPositionAndRotation(exitPoint.position, uprightExitRotation);
         playerController?.SetControlsLocked(false);
         isSitting = false;
         IsPlayerSitting = false;
@@ -86,16 +91,31 @@ public class SeatInteraction : MonoBehaviour
     private void OnDisable()
     {
         if (isSitting) IsPlayerSitting = false;
+        if (activeSeat == this)
+        {
+            activeSeat = null;
+            SetPrompt(false);
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (IsPlayer(other)) playerNear = true;
+        if (!IsPlayer(other)) return;
+
+        playerNear = true;
+        if (!isSitting) activeSeat = this;
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (IsPlayer(other) && !isSitting) playerNear = false;
+        if (!IsPlayer(other) || isSitting) return;
+
+        playerNear = false;
+        if (activeSeat == this)
+        {
+            activeSeat = null;
+            SetPrompt(false);
+        }
     }
 
     private bool IsPlayer(Collider other) =>
