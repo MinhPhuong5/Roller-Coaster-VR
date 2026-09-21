@@ -28,9 +28,6 @@ public class SeatInteraction : MonoBehaviour
     private bool isSitting;
     private bool isLeaving;
     private ShiftOrbitCamera playerCamera;
-    private Vector3 positionBeforeSitting;
-    private Quaternion rotationBeforeSitting;
-    private bool hasSavedStandingPosition;
 
     private void Awake()
     {
@@ -60,9 +57,6 @@ public class SeatInteraction : MonoBehaviour
     {
         if (playerTransform == null || seatPoint == null || playerAnimator == null) return;
 
-        positionBeforeSitting = playerTransform.position;
-        rotationBeforeSitting = playerTransform.rotation;
-        hasSavedStandingPosition = true;
         playerController?.SetControlsLocked(true);
         playerTransform.SetPositionAndRotation(seatPoint.position, seatPoint.rotation);
         playerCamera?.SetPositionOverride(seatCameraPoint);
@@ -81,15 +75,8 @@ public class SeatInteraction : MonoBehaviour
         playerCamera?.SetPositionOverride(null);
         yield return new WaitForSeconds(leaveDelay);
 
-        if (hasSavedStandingPosition)
-        {
-            // Return to the exact safe place the player occupied before sitting.
-            playerTransform.SetPositionAndRotation(positionBeforeSitting, rotationBeforeSitting);
-        }
-        else
-        {
-            playerTransform.SetPositionAndRotation(exitPoint.position, exitPoint.rotation);
-        }
+        // exitPoint is placed just above the ground and avoids putting the Rigidbody inside the seat or floor.
+        playerTransform.SetPositionAndRotation(exitPoint.position, exitPoint.rotation);
         playerController?.SetControlsLocked(false);
         isSitting = false;
         IsPlayerSitting = false;
