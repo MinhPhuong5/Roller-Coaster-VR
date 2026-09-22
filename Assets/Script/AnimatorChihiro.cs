@@ -22,6 +22,8 @@ public class AnimatorChihiro : MonoBehaviour
     public float groundCheckDistance = 0.2f;
     [Tooltip("Thời lượng bật animation IsJumping")]
     public float jumpAnimationDuration = 0.65f;
+    [Tooltip("Vận tốc bật lên khi nhảy")]
+    public float jumpVelocity = 6f;
     [Tooltip("Tốc độ lao về trước khi nhấn Space cùng W")]
     public float forwardJumpSpeed = 4f;
 
@@ -33,6 +35,8 @@ public class AnimatorChihiro : MonoBehaviour
 
     private Rigidbody rb;
     private Animator animator;
+    [SerializeField] private Animator characterAnimator;
+    public Animator CharacterAnimator => characterAnimator != null ? characterAnimator : animator;
     private Collider characterCollider;
     private bool isGrounded;
     private bool jumpRequested;
@@ -49,7 +53,7 @@ public class AnimatorChihiro : MonoBehaviour
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
-        animator = GetComponent<Animator>();
+        animator = characterAnimator != null ? characterAnimator : GetComponent<Animator>();
         characterCollider = GetComponent<Collider>();
         currentMoveSpeed = moveSpeed;
 
@@ -159,6 +163,7 @@ public class AnimatorChihiro : MonoBehaviour
             isJumping = true;
             isForwardJump = moveInput > 0.001f;
             jumpTimeRemaining = jumpAnimationDuration;
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpVelocity, rb.linearVelocity.z);
             SetJumping(true);
         }
 

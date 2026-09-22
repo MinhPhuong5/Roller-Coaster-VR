@@ -62,7 +62,8 @@ public class SeatInteraction : MonoBehaviour
         if (playerTransform == null || seatPoint == null || playerAnimator == null) return;
 
         playerController?.SetControlsLocked(true);
-        playerTransform.SetPositionAndRotation(seatPoint.position, seatPoint.rotation);
+        Quaternion uprightSeatRotation = Quaternion.Euler(0f, seatPoint.eulerAngles.y, 0f);
+        playerTransform.SetPositionAndRotation(seatPoint.position, uprightSeatRotation);
         playerCamera?.SetPositionOverride(seatCameraPoint);
         playerAnimator.SetBool("IsSitting", true);
         isSitting = true;
@@ -128,7 +129,7 @@ public class SeatInteraction : MonoBehaviour
 
         playerTransform = player.transform;
         playerController = player.GetComponent<AnimatorChihiro>();
-        playerAnimator = player.GetComponent<Animator>();
+        playerAnimator = playerController != null ? playerController.CharacterAnimator : player.GetComponent<Animator>();
         playerCamera = player.GetComponentInChildren<ShiftOrbitCamera>(true);
     }
 
