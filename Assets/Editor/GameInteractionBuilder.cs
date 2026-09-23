@@ -4,11 +4,10 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections.Generic;
 
 public static class GameInteractionBuilder
 {
-    [MenuItem("Tools/Game Interaction/1-Click Setup RollerCoaster Interaction (Method 2)")]
+    [MenuItem("Tools/Game Interaction/1-Click Setup RollerCoaster Kiosk 3D (VR Ready)")]
     public static void BuildRollerCoasterInteractionManual()
     {
         BuildRollerCoasterInteraction(silent: false);
@@ -32,12 +31,10 @@ public static class GameInteractionBuilder
 
         Undo.IncrementCurrentGroup();
         int groupIndex = Undo.GetCurrentGroup();
-        Undo.SetCurrentGroupName("Setup RollerCoaster Interaction Method 2");
+        Undo.SetCurrentGroupName("Setup RollerCoaster Kiosk 3D");
 
-        // 1. Kiểm tra / Đảm bảo Tag 'Player' cho nhân vật chính (Chihiro / AOTCharacter)
         EnsurePlayerConfig();
 
-        // 2. Tìm mô hình TauLuonSieuToc trong Hierarchy
         GameObject coasterObj = FindRollerCoasterObject();
         if (coasterObj == null)
         {
@@ -45,7 +42,7 @@ public static class GameInteractionBuilder
             return;
         }
 
-        // 3. Tạo hoặc lấy object con 'InteractionZone'
+        // Tạo hoặc lấy InteractionZone
         Transform zoneTransform = coasterObj.transform.Find("InteractionZone");
         GameObject zoneObj;
         if (zoneTransform == null)
@@ -62,25 +59,22 @@ public static class GameInteractionBuilder
             zoneObj = zoneTransform.gameObject;
         }
 
-        // Cấu hình BoxCollider (Is Trigger = true)
         BoxCollider boxCol = zoneObj.GetComponent<BoxCollider>();
         if (boxCol == null)
         {
             boxCol = zoneObj.AddComponent<BoxCollider>();
         }
         boxCol.isTrigger = true;
-        // Kích thước collider đủ rộng quanh mô hình để nhân vật tiếp cận là nhận trigger
-        boxCol.size = new Vector3(32f, 16f, 32f);
-        boxCol.center = Vector3.zero;
+        boxCol.size = new Vector3(6f, 4f, 6f);
+        boxCol.center = new Vector3(0f, 1f, 0f);
 
-        // Gắn script RollerCoasterInteraction
         RollerCoasterInteraction interactionScript = zoneObj.GetComponent<RollerCoasterInteraction>();
         if (interactionScript == null)
         {
             interactionScript = zoneObj.AddComponent<RollerCoasterInteraction>();
         }
 
-        // 4. Đảm bảo EventSystem tồn tại
+        // Đảm bảo EventSystem
         UnityEngine.EventSystems.EventSystem eventSystem = Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
         if (eventSystem == null)
         {
@@ -90,7 +84,7 @@ public static class GameInteractionBuilder
             Undo.RegisterCreatedObjectUndo(esObj, "Create EventSystem");
         }
 
-        // 5. Tạo Canvas UI chuẩn theo CÁCH 2: 1 Canvas duy nhất, xếp lớp (Layering) theo thứ tự Hierarchy
+        // Tạo Canvas Kiosk 3D World Space (Không dùng ScreenSpace Overlay dán màn hình nữa)
         GameObject oldCanvas = GameObject.Find("Canvas_GameInteraction");
         if (oldCanvas != null)
         {
@@ -99,14 +93,12 @@ public static class GameInteractionBuilder
 
         GameObject canvasObj = new GameObject("Canvas_GameInteraction");
         Canvas canvas = canvasObj.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 30; // Hiển thị ưu tiên trên màn hình
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvas.sortingOrder = 30;
 
-        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        RectTransform canvasRt = canvasObj.GetComponent<RectTransform>();
+        canvasRt.sizeDelta = new Vector2(1920f, 1080f);
+        canvasRt.localScale = new Vector3(0.0015f, 0.0015f, 0.0015f); // Tỉ lệ kích thước người thật
 
         canvasObj.AddComponent<GraphicRaycaster>();
         Undo.RegisterCreatedObjectUndo(canvasObj, "Create Canvas_GameInteraction");
@@ -115,178 +107,89 @@ public static class GameInteractionBuilder
         Sprite whiteSprite = AssetDatabase.LoadAssetAtPath<Sprite>(whitePixelPath);
 
         // =========================================================================
-        // TẦNG 1 (NẰM TRÊN TRONG HIERARCHY): PROMPT THÔNG BÁO "NHẤN F ĐỂ CHƠI TRÒ CHƠI"
-        // Thiết kế sáng tạo phong cách Genshin / Theme Park hiện đại
-        // =========================================================================
-        GameObject promptObj = CreateUIElement("Prompt_PlayGame", canvasObj.transform);
-        RectTransform promptRt = promptObj.GetComponent<RectTransform>();
-        SetAnchors(promptRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -220f), new Vector2(480f, 88f));
-
-        Image promptBg = promptObj.AddComponent<Image>();
-        if (whiteSprite != null) promptBg.sprite = whiteSprite;
-        promptBg.color = new Color(0.04f, 0.08f, 0.16f, 0.92f); // Nền xanh đen sâu thẳm sang trọng
-
-        // Viền vàng kim neon phát sáng
-        Outline promptOutline = promptObj.AddComponent<Outline>();
-        promptOutline.effectColor = new Color(1f, 0.78f, 0.25f, 0.95f);
-        promptOutline.effectDistance = new Vector2(3, -3);
-
-        // Nút phím [F] 3D nổi bật
-        GameObject keyBox = CreateUIElement("KeyBox_F", promptObj.transform);
-        RectTransform keyBoxRt = keyBox.GetComponent<RectTransform>();
-        SetAnchors(keyBoxRt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(36f, 0f), new Vector2(60f, 60f));
-        Image keyBoxImg = keyBox.AddComponent<Image>();
-        if (whiteSprite != null) keyBoxImg.sprite = whiteSprite;
-        keyBoxImg.color = Color.white;
-
-        Outline keyOutline = keyBox.AddComponent<Outline>();
-        keyOutline.effectColor = new Color(0.2f, 0.2f, 0.25f, 0.8f);
-        keyOutline.effectDistance = new Vector2(2, -2);
-
-        GameObject fTextObj = CreateUIElement("Text_F", keyBox.transform);
-        StretchFull(fTextObj.GetComponent<RectTransform>());
-        TextMeshProUGUI fTmp = AddCrispTMP(fTextObj);
-        fTmp.text = "F";
-        fTmp.fontSize = 38;
-        fTmp.fontStyle = FontStyles.Bold;
-        fTmp.alignment = TextAlignmentOptions.Center;
-        fTmp.color = new Color(0.10f, 0.14f, 0.24f, 1f);
-
-        // Cụm Text nhắc nhở: Dòng chính + Dòng phụ
-        GameObject textContainer = CreateUIElement("TextContainer", promptObj.transform);
-        RectTransform tcRt = textContainer.GetComponent<RectTransform>();
-        SetAnchors(tcRt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(265f, 0f), new Vector2(360f, 65f));
-
-        TextMeshProUGUI promptTmp = AddCrispTMP(textContainer);
-        promptTmp.text = "<size=24><b>NHẤN F ĐỂ CHƠI TRÒ CHƠI</b></size>\n<size=15><color=#FFD266>★ TÀU LƯỢN SIÊU TỐC • ROLLER COASTER ★</color></size>";
-        promptTmp.lineSpacing = 10;
-        promptTmp.alignment = TextAlignmentOptions.MidlineLeft;
-        promptTmp.color = new Color(1f, 0.98f, 0.94f, 1f);
-
-        promptObj.SetActive(false); // Mặc định ban đầu ẩn đi
-
-        // =========================================================================
-        // TẦNG 2 (NẰM DƯỚI CÙNG TRONG HIERARCHY): HỘP THOẠI XÁC NHẬN (POPUP MODAL)
-        // Vì nằm bên dưới Prompt trong Hierarchy, Modal sẽ LUÔN VẼ ĐÈ LÊN TRÊN HẾT!
+        // BẢNG ĐIỀU KHIỂN KIOSK 3D (LUÔN BẬT SẴN Ở LỐI VÀO)
         // =========================================================================
         GameObject modalObj = CreateUIElement("Panel_ConfirmationModal", canvasObj.transform);
         StretchFull(modalObj.GetComponent<RectTransform>());
-        Image modalBackdrop = modalObj.AddComponent<Image>();
-        if (whiteSprite != null) modalBackdrop.sprite = whiteSprite;
-        modalBackdrop.color = new Color(0.02f, 0.04f, 0.08f, 0.80f); // Phủ mờ toàn màn hình
 
-        // Thẻ trung tâm (Modal Card)
         GameObject modalCard = CreateUIElement("ModalCard", modalObj.transform);
         RectTransform mcRt = modalCard.GetComponent<RectTransform>();
-        SetAnchors(mcRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(740f, 460f));
+        SetAnchors(mcRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800f, 500f));
         Image mcImg = modalCard.AddComponent<Image>();
         if (whiteSprite != null) mcImg.sprite = whiteSprite;
-        mcImg.color = new Color(0.11f, 0.15f, 0.25f, 0.98f); // Xanh navy hoàng gia đậm chất giải trí
+        mcImg.color = new Color(0.10f, 0.14f, 0.24f, 0.98f);
 
-        // Viền bóng phát sáng
         Outline mcOutline = modalCard.AddComponent<Outline>();
-        mcOutline.effectColor = new Color(0.25f, 0.75f, 1f, 0.90f); // Viền Cyan công nghệ tươi mát
+        mcOutline.effectColor = new Color(0.25f, 0.75f, 1f, 0.90f);
         mcOutline.effectDistance = new Vector2(6, -6);
 
-        // Header Banner ruy băng
+        // Header Banner
         GameObject bannerObj = CreateUIElement("HeaderBanner", modalCard.transform);
         RectTransform bRt = bannerObj.GetComponent<RectTransform>();
-        SetAnchors(bRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -25f), new Vector2(660f, 62f));
+        SetAnchors(bRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(720f, 70f));
         Image bImg = bannerObj.AddComponent<Image>();
         if (whiteSprite != null) bImg.sprite = whiteSprite;
-        bImg.color = new Color(1f, 0.60f, 0.15f, 1f); // Cam năng động
+        bImg.color = new Color(1f, 0.60f, 0.15f, 1f);
 
-        Outline bOutline = bannerObj.AddComponent<Outline>();
-        bOutline.effectColor = new Color(0.8f, 0.35f, 0.05f, 1f);
-        bOutline.effectDistance = new Vector2(3, -3);
-
-        // Tiêu đề
+        // Title
         GameObject titleObj = CreateUIElement("Title", bannerObj.transform);
         StretchFull(titleObj.GetComponent<RectTransform>());
         TextMeshProUGUI titleTmp = AddCrispTMP(titleObj);
         titleTmp.text = "🎡 CÔNG VIÊN GIẢI TRÍ • TÀU LƯỢN SIÊU TỐC 🎡";
-        titleTmp.fontSize = 24;
+        titleTmp.fontSize = 28;
         titleTmp.fontStyle = FontStyles.Bold;
         titleTmp.alignment = TextAlignmentOptions.Center;
         titleTmp.color = Color.white;
 
-        // Nội dung chi tiết
+        // Nội dung mô tả
         GameObject msgObj = CreateUIElement("MessageContent", modalCard.transform);
         RectTransform msgRt = msgObj.GetComponent<RectTransform>();
-        SetAnchors(msgRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 25f), new Vector2(640f, 160f));
+        SetAnchors(msgRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 15f), new Vector2(700f, 180f));
         TextMeshProUGUI msgTmp = AddCrispTMP(msgObj);
-        msgTmp.text = "<size=24><color=#FFDD55><b>Bạn có muốn bắt đầu chuyến phiêu lưu mạo hiểm?</b></color></size>\n\n" +
+        msgTmp.text = "<size=28><color=#FFDD55><b>Bạn có muốn bắt đầu chuyến phiêu lưu mạo hiểm?</b></color></size>\n\n" +
                       "Trải nghiệm những khúc cua nghẹt thở và tốc độ xé gió trên đường ray huyền thoại!\n" +
-                      "<size=18><color=#88DDFF>Hãy chuẩn bị tinh thần và thắt chặt dây an toàn!</color></size>";
+                      "<size=20><color=#88DDFF>Hãy bấm nút bên dưới để vào ga chọn ghế.</color></size>";
         msgTmp.lineSpacing = 16;
         msgTmp.alignment = TextAlignmentOptions.Center;
         msgTmp.color = new Color(0.92f, 0.96f, 1f, 0.95f);
 
-        // Nút "Có / Bắt đầu" (Xanh ngọc lục bảo sắc nét)
+        // Nút duy nhất: "VÀO CHƠI TÀU LƯỢN" (To rõ, dễ bấm)
         GameObject btnStartObj = CreateButton("Btn_ConfirmStart", modalCard.transform,
-            new Vector2(0.5f, 0f), new Vector2(-155f, 75f), new Vector2(250f, 62f),
+            new Vector2(0.5f, 0f), new Vector2(0f, 85f), new Vector2(360f, 75f),
             new Color(0.12f, 0.75f, 0.38f, 1f), whiteSprite);
-        SetButtonText(btnStartObj, "Có / Bắt đầu  ➔", 22, Color.white);
+        SetButtonText(btnStartObj, "VÀO CHƠI NGAY  ➔", 26, Color.white);
         Outline bsOutline = btnStartObj.AddComponent<Outline>();
         bsOutline.effectColor = new Color(0.08f, 0.45f, 0.22f, 1f);
         bsOutline.effectDistance = new Vector2(3, -3);
 
-        // Nút "Không / Hủy" (Đỏ san hô quý phái)
-        GameObject btnCancelObj = CreateButton("Btn_CancelClose", modalCard.transform,
-            new Vector2(0.5f, 0f), new Vector2(155f, 75f), new Vector2(250f, 62f),
-            new Color(0.85f, 0.28f, 0.28f, 1f), whiteSprite);
-        SetButtonText(btnCancelObj, "Không / Hủy  ✕", 22, Color.white);
-        Outline bcOutline = btnCancelObj.AddComponent<Outline>();
-        bcOutline.effectColor = new Color(0.55f, 0.15f, 0.15f, 1f);
-        bcOutline.effectDistance = new Vector2(3, -3);
+        modalObj.SetActive(true); // Luôn mở sẵn trong không gian
 
-        // Phím tắt gợi ý phía dưới nút bấm
-        GameObject shortcutHint = CreateUIElement("ShortcutHint", modalCard.transform);
-        RectTransform shRt = shortcutHint.GetComponent<RectTransform>();
-        SetAnchors(shRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 22f), new Vector2(500f, 28f));
-        TextMeshProUGUI shTmp = AddCrispTMP(shortcutHint);
-        shTmp.text = "(Mẹo: Nhấn Enter để Bắt đầu  •  Nhấn Esc để Hủy)";
-        shTmp.fontSize = 16;
-        shTmp.fontStyle = FontStyles.Italic;
-        shTmp.alignment = TextAlignmentOptions.Center;
-        shTmp.color = new Color(0.6f, 0.68f, 0.8f, 0.9f);
-
-        modalObj.SetActive(false); // Mặc định ban đầu ẩn đi
-
-        // 6. Gán các tham chiếu vào script RollerCoasterInteraction
-        interactionScript.promptUI = promptObj;
-        interactionScript.promptText = promptTmp;
+        // Gán tham chiếu vào RollerCoasterInteraction
         interactionScript.confirmationModalPanel = modalObj;
         interactionScript.confirmStartButton = btnStartObj.GetComponent<Button>();
-        interactionScript.cancelCloseButton = btnCancelObj.GetComponent<Button>();
         interactionScript.modalTitleText = titleTmp;
         interactionScript.modalMessageText = msgTmp;
-        interactionScript.mainGameSceneName = "Game";
-        interactionScript.mainGameSceneIndex = 2; // Scene 3 trong Build Settings
 
-        // 7. Kiểm tra Build Settings
-        EnsureScenesInBuildSettings();
+        // Tự tìm sảnh ga VR_FloorPoint và XR Origin
+        GameObject vrFloor = GameObject.Find("VR_FloorPoint");
+        if (vrFloor != null) interactionScript.stationEntryPoint = vrFloor.transform;
 
-        // Lưu scene
+        GameObject xrRig = GameObject.Find("XR Origin (XR Rig)");
+        if (xrRig != null) interactionScript.xrOriginObject = xrRig;
+
+        SeatSwitcher sw = Object.FindFirstObjectByType<SeatSwitcher>();
+        if (sw != null) interactionScript.seatSwitcher = sw;
+
         EditorUtility.SetDirty(zoneObj);
         EditorUtility.SetDirty(canvasObj);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
         Undo.CollapseUndoOperations(groupIndex);
 
-        Debug.Log("<color=#00FF66><b>[GameInteractionBuilder] Thiết lập thành công hệ thống tương tác Tàu Lượn theo Cách 2 (1 Canvas, Layering Hierarchy)!</b></color>");
-
+        Debug.Log("<color=#00FF66><b>[GameInteractionBuilder] Đã thiết lập xong Kiosk 3D thuần UI (Không còn phím bấm)!</b></color>");
         if (!silent)
         {
-            EditorUtility.DisplayDialog("Game Interaction Setup",
-                "Đã hoàn thành thiết lập hệ thống tương tác Tàu Lượn Siêu Tốc (Cách 2):\n\n" +
-                "1. Vùng InteractionZone (Is Trigger) gắn trên TauLuonSieuToc.\n" +
-                "2. Chihiro (Tag Player) đã được kích hoạt nhận diện.\n" +
-                "3. Canvas_GameInteraction gồm 2 tầng trong Hierarchy:\n" +
-                "   - Tầng trên: Prompt [F] phong cách Genshin.\n" +
-                "   - Tầng dưới: Modal Card Popup vẽ đè lên trên hết kèm phím tắt Enter/Esc.\n" +
-                "4. Nút 'Có / Bắt đầu' sẽ chuyển sang scene 3 (Game).",
-                "Tuyệt vời");
+            EditorUtility.DisplayDialog("Setup Thành Công", "Đã dựng xong Kiosk 3D ở World Space. Không còn dùng phím F hay bàn phím, chỉ việc bấm nút trên bảng.", "OK");
         }
     }
 
@@ -301,61 +204,22 @@ public static class GameInteractionBuilder
             foreach (Transform child in parentObj.transform)
             {
                 if (child.name.ToLower().Contains("tauluon") || child.name.ToLower().Contains("coaster"))
-                {
                     return child.gameObject;
-                }
             }
-            if (parentObj.transform.childCount > 0)
-            {
-                return parentObj.transform.GetChild(0).gameObject;
-            }
+            if (parentObj.transform.childCount > 0) return parentObj.transform.GetChild(0).gameObject;
             return parentObj;
         }
-
         return null;
     }
 
     private static void EnsurePlayerConfig()
     {
-        // Ưu tiên tìm nhân vật chính Chihiro
-        GameObject playerObj = GameObject.Find("Chihiro");
-        if (playerObj == null)
+        GameObject playerObj = GameObject.Find("XR Origin (XR Rig)");
+        if (playerObj == null) playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null && !playerObj.CompareTag("Player"))
         {
-            playerObj = GameObject.FindGameObjectWithTag("Player");
-        }
-
-        if (playerObj != null)
-        {
-            if (!playerObj.CompareTag("Player"))
-            {
-                playerObj.tag = "Player";
-                EditorUtility.SetDirty(playerObj);
-                Debug.Log($"[GameInteractionBuilder] Đã gán Tag 'Player' cho: {playerObj.name}");
-            }
-        }
-    }
-
-    private static void EnsureScenesInBuildSettings()
-    {
-        List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-        string gameScenePath = "Assets/Scenes/Game.unity";
-
-        bool found = false;
-        foreach (var scene in scenes)
-        {
-            if (scene.path == gameScenePath)
-            {
-                found = true;
-                scene.enabled = true;
-                break;
-            }
-        }
-
-        if (!found)
-        {
-            scenes.Add(new EditorBuildSettingsScene(gameScenePath, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
-            Debug.Log("[GameInteractionBuilder] Đã bổ sung Assets/Scenes/Game.unity vào Build Settings!");
+            playerObj.tag = "Player";
+            EditorUtility.SetDirty(playerObj);
         }
     }
 

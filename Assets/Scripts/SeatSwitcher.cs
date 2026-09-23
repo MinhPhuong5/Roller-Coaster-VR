@@ -1,7 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
-using UnityEngine.SceneManagement;
 
 public class SeatSwitcher : MonoBehaviour
 {
@@ -13,28 +12,31 @@ public class SeatSwitcher : MonoBehaviour
     public GameObject leftController;
     public GameObject rightController;
 
-    [Header("Hai Chế Độ Xoay Chuột")]
-    public FreeCamLook freeCamLook;
+    [Header("Chế Độ Xoay Chuột")]
+    [Tooltip("Kéo MouseLook trên Main Camera của XR Origin vào đây")]
     public MouseLook mouseLook;
 
     [Header("Ghế trong tàu")]
     public Transform[] seats;
     private int currentSeatIndex = 0;
 
-    [Header("Ride")]
+    [Header("Ride Controller")]
     public RideController rideController;
 
     [Header("Rào Chắn Ga")]
     public StationGateController stationGate;
 
     [Header("UI Sảnh")]
+    [Tooltip("Kéo RideUIPanel vào đây")]
     public GameObject uiPanel;
+    [Tooltip("Kéo SelectSeatGroup vào đây")]
+    public GameObject selectSeatGroup;
+    [Tooltip("Kéo GameOverGroup vào đây (hỏi chơi tiếp)")]
+    public GameObject gameOverPanel;
     public GameObject startButton;
 
-    [Header("Tùy Chọn Đếm Ngược (Setup Trên Inspector)")]
-    [Tooltip("Tích chọn để hiển thị chữ 3.. 2.. 1.. GO!")]
+    [Header("Tùy Chọn Đếm Ngược")]
     public bool useCountdownText = true;
-    [Tooltip("Tích chọn để phát âm thanh đếm ngược")]
     public bool useCountdownAudio = true;
 
     [Header("Đếm Ngược Bắt Đầu")]
@@ -42,49 +44,95 @@ public class SeatSwitcher : MonoBehaviour
     public int countdownSeconds = 3;
 
     [Header("Âm Thanh Đếm Ngược")]
-    [Tooltip("Kéo AudioSource chứa file Countdown vào đây")]
     public AudioSource countdownAudio;
 
     [Header("Thời Gian Chờ Mở Rào (Giây)")]
     public float gateOpenDelay = 6.0f;
 
+    [Header("Điểm Sàn Ga Tàu (VR_FloorPoint)")]
+    [Tooltip("Kéo VR_FloorPoint ở sảnh ga vào đây")]
+    public Transform stationFloorPoint;
+
+    [Header("Điểm Thoát Về Map Công Viên")]
+    [Tooltip("Kéo CoasterReturnMapPoint ở ngoài đường dạo công viên vào đây")]
+    public Transform parkReturnPoint;
+
     private bool isRiding = false;
     private bool isHandlingExit = false;
     private bool isGateAlreadyClosed = false;
 
-    // Quản lý riêng Main Camera
     private Transform mainCameraTransform;
     private Transform originalCamParent;
-    private Vector3 originalCamLocalPos;
-    private Quaternion originalCamLocalRot;
+    private XRFallbackWalkController walkController;
 
     void Start()
     {
-        if (xrOriginRig != null)
-        {
-            Camera cam = xrOriginRig.GetComponentInChildren<Camera>();
-            if (cam != null)
-            {
-                mainCameraTransform = cam.transform;
-                originalCamParent = mainCameraTransform.parent;
-                originalCamLocalPos = mainCameraTransform.localPosition;
-                originalCamLocalRot = mainCameraTransform.localRotation;
-            }
-        }
-
-        ForceBoardingMode();
+        CacheCameraReferences();
+        HideUI();
 
         if (startButton != null) startButton.SetActive(false);
         if (countdownText != null) countdownText.gameObject.SetActive(false);
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
+
+        if (stationFloorPoint == null)
+        {
+            GameObject floor = GameObject.Find("VR_FloorPoint");
+            if (floor != null) stationFloorPoint = floor.transform;
+        }
+
+        if (rideController == null)
+        {
+            rideController = Object.FindAnyObjectByType<RideController>();
+        }
     }
 
     void Update()
     {
         if (rideController != null && rideController.currentState == RideController.RideState.WaitingAtStation)
         {
-            if (!isRiding && !isHandlingExit && Input.GetKeyDown(KeyCode.Tab))
+            if (!isRiding && !isHandlingExit)
             {
-                NextSeat();
+                if (Input.GetKeyDown(KeyCode.Tab))
+                {
+                    NextSeat();
+                }
+
+                // Giữ chuột phải để lia góc nhìn ngắm cảnh sảnh ga
+                if (Input.GetMouseButtonDown(1))
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                }
+                else if (Input.GetMouseButtonUp(1))
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                }
+            }
+        }
+    }
+
+    private void CacheCameraReferences()
+    {
+        if (xrOriginRig != null)
+        {
+            if (walkController == null)
+            {
+                walkController = xrOriginRig.GetComponent<XRFallbackWalkController>();
+            }
+
+            if (mainCameraTransform == null)
+            {
+                Camera cam = xrOriginRig.GetComponentInChildren<Camera>();
+                if (cam != null)
+                {
+                    mainCameraTransform = cam.transform;
+                    originalCamParent = mainCameraTransform.parent;
+                    if (mouseLook == null)
+                    {
+                        mouseLook = cam.GetComponent<MouseLook>();
+                    }
+                }
             }
         }
     }
@@ -105,19 +153,46 @@ public class SeatSwitcher : MonoBehaviour
 
     public void SwitchSeat(int index)
     {
-        if (seats == null || seats.Length == 0 || mainCameraTransform == null) return;
+        if (seats == null || seats.Length == 0) return;
+        CacheCameraReferences();
 
         currentSeatIndex = index;
 
-        // TẮT toàn bộ cụm XR Rig ở sảnh để ngắt va chạm và rơi tự do
-        if (xrOriginRig != null) xrOriginRig.SetActive(false);
+        if (walkController != null) walkController.enabled = false;
 
-        // ĐƯA TRỰC TIẾP MAIN CAMERA VÀO LÀM CON CỦA GHẾ
-        mainCameraTransform.SetParent(seats[index]);
-        mainCameraTransform.localPosition = Vector3.zero;
-        mainCameraTransform.localRotation = Quaternion.identity;
+        Transform targetSeat = seats[index];
 
-        if (freeCamLook != null) freeCamLook.enabled = false;
+        // Ép mắt camera rơi chính xác vào tâm điểm 3 trục rotate của ghế
+        if (xrOriginRig != null)
+        {
+            CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+
+            xrOriginRig.transform.SetParent(targetSeat);
+            xrOriginRig.transform.localRotation = Quaternion.identity;
+            xrOriginRig.transform.localScale = Vector3.one;
+
+            if (mainCameraTransform != null)
+            {
+                Vector3 camLocalPos = xrOriginRig.transform.InverseTransformPoint(mainCameraTransform.position);
+                xrOriginRig.transform.localPosition = -camLocalPos;
+            }
+            else
+            {
+                xrOriginRig.transform.localPosition = Vector3.zero;
+            }
+
+            if (cc != null) cc.enabled = true;
+            Physics.SyncTransforms();
+        }
+        else if (mainCameraTransform != null)
+        {
+            mainCameraTransform.SetParent(targetSeat);
+            mainCameraTransform.localPosition = Vector3.zero;
+            mainCameraTransform.localRotation = Quaternion.identity;
+        }
+
+        // Bật xoay góc nhìn chuột trong khoang tàu
         if (mouseLook != null)
         {
             mouseLook.enabled = true;
@@ -130,6 +205,8 @@ public class SeatSwitcher : MonoBehaviour
     public void HideUI()
     {
         if (uiPanel != null) uiPanel.SetActive(false);
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (startButton != null) startButton.SetActive(false);
     }
 
@@ -147,30 +224,70 @@ public class SeatSwitcher : MonoBehaviour
         ForceBoardingMode();
     }
 
-    private void ForceBoardingMode()
+    /// <summary>
+    /// Đưa người chơi ra sàn ga và ép góc nhìn nhìn thẳng vào bảng chọn ghế
+    /// </summary>
+    public void ForceBoardingMode()
     {
-        // BẬT LẠI XR Rig ở sảnh
-        if (xrOriginRig != null) xrOriginRig.SetActive(true);
+        CacheCameraReferences();
 
-        // Trả Main Camera về lại cụm XR Rig ở sảnh
-        if (mainCameraTransform != null && originalCamParent != null)
+        if (walkController != null) walkController.enabled = false;
+
+        // 1. Tháo người chơi ra khỏi ghế và đưa ra đứng tại VR_FloorPoint
+        if (xrOriginRig != null)
         {
-            mainCameraTransform.SetParent(originalCamParent);
-            mainCameraTransform.localPosition = originalCamLocalPos;
-            mainCameraTransform.localRotation = originalCamLocalRot;
+            xrOriginRig.SetActive(true);
+            xrOriginRig.transform.SetParent(null);
+            xrOriginRig.transform.localScale = Vector3.one;
+
+            if (stationFloorPoint != null)
+            {
+                CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+
+                xrOriginRig.transform.SetPositionAndRotation(stationFloorPoint.position, stationFloorPoint.rotation);
+
+                if (cc != null) cc.enabled = true;
+                Physics.SyncTransforms();
+            }
         }
 
-        if (freeCamLook != null) freeCamLook.enabled = true;
-        if (mouseLook != null) mouseLook.enabled = false;
+        // 2. Trả Main Camera về vị trí gốc và ép góc quay thẳng
+        if (mainCameraTransform != null && originalCamParent != null)
+        {
+            if (mainCameraTransform.parent != originalCamParent)
+            {
+                mainCameraTransform.SetParent(originalCamParent);
+            }
+            mainCameraTransform.localPosition = Vector3.zero;
+            mainCameraTransform.localRotation = Quaternion.identity;
+        }
+
+        // 3. Reset MouseLook để hướng nhìn khóa thẳng theo hướng của sàn ga (hướng vào UI)
+        if (mouseLook != null)
+        {
+            mouseLook.enabled = true;
+            Quaternion targetRotation = stationFloorPoint != null ? stationFloorPoint.rotation : Quaternion.identity;
+            mouseLook.ResetLook(targetRotation);
+        }
 
         SetControllersActive(true);
 
+        // Mở chuột tự do
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
+        // Bật bảng chọn ghế, ẩn bảng kết thúc
         if (uiPanel != null) uiPanel.SetActive(true);
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (startButton != null) startButton.SetActive(false);
         if (countdownText != null) countdownText.gameObject.SetActive(false);
+
+        if (rideController != null)
+        {
+            rideController.ResetToStation();
+        }
     }
 
     public void EnterSeatedMode() { }
@@ -186,7 +303,7 @@ public class SeatSwitcher : MonoBehaviour
 
     public void ExitCar()
     {
-        if (!isHandlingExit && isRiding)
+        if (!isHandlingExit)
         {
             StartCoroutine(HandleRideEndSequence());
         }
@@ -196,7 +313,6 @@ public class SeatSwitcher : MonoBehaviour
     {
         isGateAlreadyClosed = false;
 
-        // 1. Mở rào chắn ga
         if (stationGate != null)
         {
             stationGate.OpenGate();
@@ -206,20 +322,17 @@ public class SeatSwitcher : MonoBehaviour
 
         if (hasCountdown)
         {
-            // Chờ mở rào trước một khoảng thời gian (gateOpenDelay - countdownSeconds)
             float waitBeforeCountdown = Mathf.Max(0f, gateOpenDelay - countdownSeconds);
             if (waitBeforeCountdown > 0f)
             {
                 yield return new WaitForSeconds(waitBeforeCountdown);
             }
 
-            // Phát âm thanh đếm ngược nếu được tích chọn
             if (useCountdownAudio && countdownAudio != null)
             {
                 countdownAudio.Play();
             }
 
-            // Hiển thị chữ đếm ngược nếu được tích chọn
             if (useCountdownText && countdownText != null)
             {
                 countdownText.gameObject.SetActive(true);
@@ -234,20 +347,16 @@ public class SeatSwitcher : MonoBehaviour
             }
             else
             {
-                // Nếu chỉ bật tiếng mà tắt chữ: chờ đúng khoảng thời gian bằng countdownSeconds
                 yield return new WaitForSeconds(Mathf.Min(gateOpenDelay, (float)countdownSeconds));
             }
         }
         else
         {
-            // NẾU TẮT CẢ TIẾNG LẪN CHỮ: Chờ đủ đúng gateOpenDelay để rào mở xong hoàn toàn
             yield return new WaitForSeconds(gateOpenDelay);
         }
 
-        // 2. Khóa controller VR
         SetControllersActive(false);
 
-        // 3. Tàu bắt đầu lăn bánh
         if (rideController != null)
         {
             rideController.StartRide();
@@ -257,17 +366,21 @@ public class SeatSwitcher : MonoBehaviour
         isHandlingExit = false;
     }
 
+    /// <summary>
+    /// Chờ tàu phanh đỗ hẳn vào bến rồi mới tháo người chơi ra sàn và hiện GameOverGroup
+    /// </summary>
     private IEnumerator HandleRideEndSequence()
     {
         isHandlingExit = true;
-        yield return new WaitForSeconds(1.2f);
+
+        // CHỜ ĐỦ THỜI GIAN ĐỂ TÀU PHANH TỪ TỪ VỀ BẾN DỪNG HẲN (tránh hiện UI sớm khi tàu còn trượt)
+        yield return new WaitForSeconds(3.5f);
 
         if (stationGate != null && stationGate.gateAudioSource != null)
         {
             stationGate.gateAudioSource.Stop();
         }
 
-        // Dừng âm thanh đếm ngược nếu còn sót lại
         if (countdownAudio != null && countdownAudio.isPlaying)
         {
             countdownAudio.Stop();
@@ -276,11 +389,56 @@ public class SeatSwitcher : MonoBehaviour
         isRiding = false;
         isHandlingExit = false;
 
-        ForceBoardingMode();
-
-        if (rideController != null)
+        // 1. Tháo người chơi ra khỏi ghế, đưa ra đứng ở VR_FloorPoint
+        if (xrOriginRig != null)
         {
-            rideController.ResetToStation();
+            xrOriginRig.SetActive(true);
+            xrOriginRig.transform.SetParent(null);
+            xrOriginRig.transform.localScale = Vector3.one;
+
+            if (stationFloorPoint != null)
+            {
+                CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+
+                xrOriginRig.transform.SetPositionAndRotation(stationFloorPoint.position, stationFloorPoint.rotation);
+
+                if (cc != null) cc.enabled = true;
+                Physics.SyncTransforms();
+            }
+        }
+
+        // 2. Trả Main Camera về vị trí chuẩn và xoay thẳng
+        if (mainCameraTransform != null && originalCamParent != null)
+        {
+            if (mainCameraTransform.parent != originalCamParent)
+            {
+                mainCameraTransform.SetParent(originalCamParent);
+            }
+            mainCameraTransform.localPosition = Vector3.zero;
+            mainCameraTransform.localRotation = Quaternion.identity;
+        }
+
+        if (mouseLook != null)
+        {
+            mouseLook.enabled = true;
+            Quaternion targetRotation = stationFloorPoint != null ? stationFloorPoint.rotation : Quaternion.identity;
+            mouseLook.ResetLook(targetRotation);
+        }
+
+        SetControllersActive(true);
+
+        // 3. Mở chuột tự do
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // 4. HIỆN BẢNG HỎI CHƠI LẠI (GameOverGroup), ẨN BẢNG CHỌN GHẾ
+        if (uiPanel != null) uiPanel.SetActive(true);
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+            Debug.Log("[SeatSwitcher] Đã dừng hẳn tại ga -> Bật GameOverGroup thành công!");
         }
     }
 
@@ -290,32 +448,35 @@ public class SeatSwitcher : MonoBehaviour
         if (rightController != null) rightController.SetActive(isActive);
     }
 
+    /// <summary>
+    /// Thoát khỏi tàu lượn và dịch chuyển trở về đường dạo công viên
+    /// </summary>
     public void ReturnToParkMap()
     {
         Time.timeScale = 1f;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
 
-        // Ghi nhận cờ để ParkScene nhận biết vừa đi tàu lượn xong
-        PlayerPrefs.SetInt("HasPlayedCoaster", 1);
-        PlayerPrefs.Save();
-
-        // Nạp Scene bất đồng bộ để tránh khựng khung hình
-        StartCoroutine(LoadParkSceneAsyncRoutine());
-    }
-
-    private IEnumerator LoadParkSceneAsyncRoutine()
-    {
-        // Hạn chế việc load asset chiếm quyền luồng chính
-        Application.backgroundLoadingPriority = ThreadPriority.Low;
-
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync("ParkScene");
-
-        while (!asyncLoad.isDone)
+        if (xrOriginRig != null)
         {
-            yield return null;
+            xrOriginRig.transform.SetParent(null);
+
+            if (parkReturnPoint != null)
+            {
+                CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+
+                xrOriginRig.transform.SetPositionAndRotation(parkReturnPoint.position, parkReturnPoint.rotation);
+
+                if (cc != null) cc.enabled = true;
+                Physics.SyncTransforms();
+            }
+
+            if (walkController != null) walkController.enabled = true;
         }
 
-        Application.backgroundLoadingPriority = ThreadPriority.Normal;
+        if (mouseLook != null) mouseLook.enabled = false;
+
+        HideUI();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 }

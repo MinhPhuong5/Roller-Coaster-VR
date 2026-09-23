@@ -92,9 +92,19 @@ public class RideController : MonoBehaviour
 
         currentState = RideState.WaitingAtStation;
 
-        // Đảm bảo khi mới vào chỉ hiện nhóm chọn ghế, ẩn nhóm hỏi chơi tiếp
         if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
         if (gameOverGroup != null) gameOverGroup.SetActive(false);
+
+        if (seatSwitcher == null)
+        {
+            seatSwitcher = Object.FindAnyObjectByType<SeatSwitcher>();
+        }
+
+        if (xrOriginObject == null)
+        {
+            XRFallbackWalkController walk = Object.FindAnyObjectByType<XRFallbackWalkController>();
+            if (walk != null) xrOriginObject = walk.gameObject;
+        }
     }
 
     void Update()
@@ -106,17 +116,17 @@ public class RideController : MonoBehaviour
         bool isFinalLap = (currentLapIndex >= numberOfLaps - 1);
         float currentLoopTime = traveledAnimationTime % clipLength;
 
-        // 1. TÍNH TỐC ĐỘ REVERSE CHUẨN
+        // 1. Tính tốc độ tua animation
         float targetSpeed = CalculateLapSpeed(currentLoopTime, currentLapIndex, isFinalLap);
         targetSpeed = Mathf.Max(0.12f, targetSpeed * globalSpeedMultiplier);
 
         state.speed = -targetSpeed;
         traveledAnimationTime += Time.deltaTime * targetSpeed;
 
-        // 2. HÒA ÂM
+        // 2. Cập nhật âm thanh ray & xích kéo
         UpdateLapAudio(targetSpeed, currentLoopTime, currentLapIndex, isFinalLap);
 
-        // 3. ĐÓNG RÀO GA SỚM VÒNG CUỐI
+        // 3. Đóng rào sớm vòng cuối
         float startOfFinalLap = clipLength * (numberOfLaps - 1);
         if (isFinalLap && !hasTriggeredEarlyGateClose && traveledAnimationTime >= (startOfFinalLap + 10.0f))
         {
@@ -127,8 +137,8 @@ public class RideController : MonoBehaviour
             }
         }
 
-        // 4. VỀ ĐÍCH VÀ HIỆN BẢNG HỎI CHƠI TIẾP
-        if (traveledAnimationTime >= clipLength * numberOfLaps)
+        // 4. Về đích: Đợi chạy đủ toàn bộ thời lượng vòng chạy
+        if (traveledAnimationTime >= (clipLength * numberOfLaps))
         {
             FinishRide();
         }
@@ -146,7 +156,6 @@ public class RideController : MonoBehaviour
         {
             if (lapIndex > 0) return Mathf.Lerp(2.5f, 1.8f, currentLoopTime / 13.0f);
 
-            // Vòng đầu tiên: Xuất phát êm ái leo dốc
             if (currentLoopTime < 5.5f)
             {
                 return Mathf.Lerp(0.15f, 0.42f, currentLoopTime / 5.5f);
@@ -214,7 +223,7 @@ public class RideController : MonoBehaviour
 
     public void StartRide()
     {
-        if (currentState != RideState.WaitingAtStation || state == null) return;
+        if (state == null) return;
         traveledAnimationTime = 0f;
         hasTriggeredEarlyGateClose = false;
         hasPlayedBrakeSqueal = false;
@@ -233,50 +242,76 @@ public class RideController : MonoBehaviour
 
     private void FinishRide()
     {
+        if (currentState == RideState.Finished) return;
+        currentState = RideState.Finished;
+
+        Debug.Log("[RideController] Tàu bắt đầu vào ga phanh -> Gọi SeatSwitcher xử lý dừng hẳn.");
+
         state.time = ActualStationTime;
         state.speed = 0f;
         anim.Sample();
-        currentState = RideState.Finished;
 
         if (trackWindAudio != null) trackWindAudio.Stop();
         if (clankAudio != null) clankAudio.Stop();
-        if (seatSwitcher != null) seatSwitcher.ExitCar();
 
-        // Bật lại khung UI và hiển thị nhóm hỏi chơi tiếp
-        if (rideUIPanel != null) rideUIPanel.SetActive(true);
-        if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
-        if (gameOverGroup != null) gameOverGroup.SetActive(true);
+        if (seatSwitcher != null)
+        {
+            seatSwitcher.ExitCar();
+        }
+        else
+        {
+            if (rideUIPanel != null) rideUIPanel.SetActive(true);
+            if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
+            if (gameOverGroup != null) gameOverGroup.SetActive(true);
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
 
         if (reloadSceneOnFinish) Invoke(nameof(ReloadScene), delayBeforeReload);
     }
 
-    // Gắn vào sự kiện nút CÓ (Btn_Yes)
+    // Sự kiện nút CÓ (BtnYes)
     public void OnClick_PlayAgain()
     {
         currentState = RideState.WaitingAtStation;
         traveledAnimationTime = 0f;
 
-        // Đổi trạng thái UI: Ẩn bảng hỏi, hiện lại 4 nút chọn ghế
-        if (gameOverGroup != null) gameOverGroup.SetActive(false);
-        if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
+        if (seatSwitcher != null)
+        {
+            seatSwitcher.ForceBoardingMode();
+        }
+        else
+        {
+            if (gameOverGroup != null) gameOverGroup.SetActive(false);
+            if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
+        }
     }
 
-    // Gắn vào sự kiện nút KHÔNG (Btn_No)
+    // Sự kiện nút KHÔNG (BtnNo)
     public void OnClick_ExitToMap()
     {
-        // 1. Tắt toàn bộ bảng UI ga tàu
-        if (rideUIPanel != null) rideUIPanel.SetActive(false);
-
-        // 2. Dịch chuyển người chơi ra vị trí Map
-        if (xrOriginObject != null && mapReturnPoint != null)
+        if (seatSwitcher != null)
         {
-            CharacterController cc = xrOriginObject.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;
+            seatSwitcher.ReturnToParkMap();
+        }
+        else
+        {
+            if (rideUIPanel != null) rideUIPanel.SetActive(false);
+            if (xrOriginObject != null && mapReturnPoint != null)
+            {
+                xrOriginObject.transform.SetParent(null);
+                xrOriginObject.transform.localScale = Vector3.one;
+                CharacterController cc = xrOriginObject.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+                xrOriginObject.transform.SetPositionAndRotation(mapReturnPoint.position, mapReturnPoint.rotation);
+                if (cc != null) cc.enabled = true;
+                Physics.SyncTransforms();
 
-            xrOriginObject.transform.position = mapReturnPoint.position;
-            xrOriginObject.transform.rotation = mapReturnPoint.rotation;
-
-            if (cc != null) cc.enabled = true;
+                XRFallbackWalkController walkCtrl = xrOriginObject.GetComponent<XRFallbackWalkController>();
+                if (walkCtrl != null) walkCtrl.enabled = true;
+            }
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
     }
 
@@ -288,15 +323,12 @@ public class RideController : MonoBehaviour
     public void GenerateSpeedCurve()
     {
         speedCurve = new AnimationCurve();
-
         speedCurve.AddKey(new Keyframe(0f, 0.15f));
         speedCurve.AddKey(new Keyframe(5.5f, 0.42f));
         speedCurve.AddKey(new Keyframe(9.0f, 0.42f));
         speedCurve.AddKey(new Keyframe(9.5f, 0.35f));
-
         speedCurve.AddKey(new Keyframe(9.9f, 0.18f));
         speedCurve.AddKey(new Keyframe(10.4f, 0.35f));
-
         speedCurve.AddKey(new Keyframe(12.8f, 2.85f));
         speedCurve.AddKey(new Keyframe(17.0f, 1.3f));
         speedCurve.AddKey(new Keyframe(20.0f, 2.0f));
