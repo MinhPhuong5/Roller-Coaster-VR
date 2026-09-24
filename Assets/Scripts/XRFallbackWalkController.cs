@@ -1,10 +1,10 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.XR;
 
 /// <summary>
 /// Điều khiển XR Origin đi bộ WASD + Giữ chuột phải để xoay góc nhìn trên Laptop/PC.
-/// Chuột luôn tự do để tương tác Kiosk UI, không cần bấm ESC.
-/// Tự động tắt khi cắm kính VR thật.
+/// Sử dụng hoàn toàn New Input System. Tự động bỏ qua khi cắm kính VR thật hoặc không có chuột/phím.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
 public class XRFallbackWalkController : MonoBehaviour
@@ -50,7 +50,6 @@ public class XRFallbackWalkController : MonoBehaviour
             if (pitch > 180f) pitch -= 360f;
         }
 
-        // Mặc định luôn để chuột tự do, không giấu con trỏ chuột
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -59,39 +58,40 @@ public class XRFallbackWalkController : MonoBehaviour
     {
         if (isVRActive) return;
 
-        // Bấm giữ chuột phải để lia camera ngắm nhìn công viên
-        if (Input.GetMouseButtonDown(1))
+        // Xử lý chuột qua New Input System (PC testing)
+        if (Mouse.current != null)
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-        else if (Input.GetMouseButtonUp(1))
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            if (Mouse.current.rightButton.wasPressedThisFrame)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
+            else if (Mouse.current.rightButton.wasReleasedThisFrame)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+
+            if (Cursor.lockState == CursorLockMode.Locked)
+            {
+                RotateView();
+            }
         }
 
-        // Chỉ xoay góc nhìn khi đang giữ chuột phải
-        if (Cursor.lockState == CursorLockMode.Locked)
-        {
-            RotateView();
-        }
-
-        // Đi bộ bằng WASD luôn hoạt động
+        // Đi bộ bằng WASD qua New Input System
         MovePlayer();
     }
 
     private void RotateView()
     {
-        if (cameraTransform == null) return;
+        if (cameraTransform == null || Mouse.current == null) return;
 
-        yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
-        pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
+        Vector2 mouseDelta = Mouse.current.delta.ReadValue();
+        yaw += mouseDelta.x * mouseSensitivity * 0.1f;
+        pitch -= mouseDelta.y * mouseSensitivity * 0.1f;
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
 
-        // Xoay thân người theo phương ngang (Y)
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-        // Xoay camera ngước lên / cúi xuống (X)
         cameraTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
@@ -99,8 +99,16 @@ public class XRFallbackWalkController : MonoBehaviour
     {
         if (characterController == null || cameraTransform == null) return;
 
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
+        float h = 0f;
+        float v = 0f;
+
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) v += 1f;
+            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) v -= 1f;
+            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) h += 1f;
+            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) h -= 1f;
+        }
 
         Vector3 forward = cameraTransform.forward;
         Vector3 right = cameraTransform.right;
@@ -110,7 +118,8 @@ public class XRFallbackWalkController : MonoBehaviour
         right.Normalize();
 
         Vector3 moveDir = (forward * v + right * h).normalized;
-        float speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+        bool isRunning = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+        float speed = isRunning ? runSpeed : walkSpeed;
 
         if (characterController.isGrounded)
         {

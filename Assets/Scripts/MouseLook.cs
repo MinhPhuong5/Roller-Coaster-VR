@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class MouseLook : MonoBehaviour
 {
@@ -20,13 +21,19 @@ public class MouseLook : MonoBehaviour
 
     void LateUpdate()
     {
+        // Khi build độc lập lên kính Meta Quest (không gắn chuột), tự động bỏ qua để tránh lỗi
+        if (Mouse.current == null) return;
+
         bool isLocked = (Cursor.lockState == CursorLockMode.Locked);
-        bool isHoldingRightClick = Input.GetMouseButton(1);
+        bool isHoldingRightClick = Mouse.current.rightButton.isPressed;
 
         if (!isLocked && !isHoldingRightClick) return;
 
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        // Đọc delta chuột qua New Input System
+        Vector2 mouseDelta = Mouse.current.delta.ReadValue();
+
+        float mouseX = mouseDelta.x * mouseSensitivity * 0.05f * Time.deltaTime;
+        float mouseY = mouseDelta.y * mouseSensitivity * 0.05f * Time.deltaTime;
 
         yaw += mouseX;
         pitch -= mouseY;

@@ -34,7 +34,7 @@ public static class TicketSystemBuilder
         Undo.SetCurrentGroupName("Setup Ticket System UI");
 
         // 1. Tìm hoặc tạo EventSystem
-        UnityEngine.EventSystems.EventSystem eventSystem = Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
+        UnityEngine.EventSystems.EventSystem eventSystem = Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
         if (eventSystem == null)
         {
             GameObject esObj = new GameObject("EventSystem");
@@ -47,10 +47,10 @@ public static class TicketSystemBuilder
         GameObject oldCanvas = GameObject.Find("Canvas_TicketSystem");
         if (oldCanvas != null) Undo.DestroyObjectImmediate(oldCanvas);
 
-        // 3. Tạo Canvas UI chính
+        // 3. Tạo Canvas UI chính (World Space đặt cố định trước quầy vé)
         GameObject canvasObj = new GameObject("Canvas_TicketSystem");
         Canvas canvas = canvasObj.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.renderMode = RenderMode.WorldSpace;
         canvas.sortingOrder = 20;
 
         CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
@@ -60,6 +60,21 @@ public static class TicketSystemBuilder
         scaler.matchWidthOrHeight = 0.5f;
 
         canvasObj.AddComponent<GraphicRaycaster>();
+        canvasObj.AddComponent<UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster>();
+
+        // Đặt vị trí Canvas ngay trước quầy vé (tìm vị trí của QuayBanVe nếu có)
+        GameObject boothObj = GameObject.Find("QuayBanVe");
+        if (boothObj != null)
+        {
+            canvasObj.transform.position = boothObj.transform.position + boothObj.transform.forward * 1.5f + Vector3.up * 0.5f;
+            canvasObj.transform.rotation = boothObj.transform.rotation;
+        }
+        else
+        {
+            canvasObj.transform.position = new Vector3(0f, 2f, 3f);
+        }
+        canvasObj.transform.localScale = new Vector3(0.0015f, 0.0015f, 0.0015f);
+
         Undo.RegisterCreatedObjectUndo(canvasObj, "Create Canvas_TicketSystem");
 
         // Gắn TicketShopUIManager vào Canvas
@@ -70,154 +85,7 @@ public static class TicketSystemBuilder
         Sprite whiteSprite = AssetDatabase.LoadAssetAtPath<Sprite>(whitePixelPath);
 
         // ==========================================
-        // A. PROMPT TƯƠNG TÁC PHÍM [F] PHONG CÁCH GENSHIN (NẰM Ở CHÍNH GIỮA BÊN PHẢI NHÂN VẬT)
-        // ==========================================
-        GameObject promptObj = CreateUIElement("Genshin_InteractionPrompt", canvasObj.transform);
-        RectTransform promptRt = promptObj.GetComponent<RectTransform>();
-        // Một prompt lớn, tương phản cao, đặt ngay dưới tâm màn hình.
-        SetAnchors(promptRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -180f), new Vector2(390f, 82f));
-        
-        // Nền tối trong suốt viền bo mờ
-        Image promptBg = promptObj.AddComponent<Image>();
-        if (whiteSprite != null) promptBg.sprite = whiteSprite;
-        promptBg.color = new Color(0.025f, 0.04f, 0.08f, 0.96f);
-
-        // Viền vàng nhẹ phong cách Genshin
-        Outline promptOutline = promptObj.AddComponent<Outline>();
-        promptOutline.effectColor = new Color(1f, 0.7f, 0.2f, 0.95f);
-        promptOutline.effectDistance = new Vector2(3, -3);
-
-        // Ô phím [F] hình chữ nhật viền trắng sáng
-        GameObject keyBox = CreateUIElement("KeyBox", promptObj.transform);
-        RectTransform keyBoxRt = keyBox.GetComponent<RectTransform>();
-        SetAnchors(keyBoxRt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(28f, 0f), new Vector2(58f, 58f));
-        Image keyBoxImg = keyBox.AddComponent<Image>();
-        if (whiteSprite != null) keyBoxImg.sprite = whiteSprite;
-        keyBoxImg.color = Color.white;
-
-        // Chữ F
-        GameObject fText = CreateUIElement("Text_F", keyBox.transform);
-        StretchFull(fText.GetComponent<RectTransform>());
-        TextMeshProUGUI fTmp = AddCrispTMP(fText);
-        fTmp.text = "F";
-        fTmp.fontSize = 36;
-        fTmp.fontStyle = FontStyles.Bold;
-        fTmp.alignment = TextAlignmentOptions.Center;
-        fTmp.color = new Color(0.12f, 0.14f, 0.2f, 1f);
-
-        // Ghi chú bên cạnh: Icon tay + Chữ Mua Vé
-        GameObject labelObj = CreateUIElement("Prompt_Label", promptObj.transform);
-        RectTransform labelRt = labelObj.GetComponent<RectTransform>();
-        SetAnchors(labelRt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(225f, 0f), new Vector2(285f, 58f));
-        TextMeshProUGUI labelTmp = AddCrispTMP(labelObj);
-        labelTmp.text = "MUA VÉ";
-        labelTmp.fontSize = 30;
-        labelTmp.fontStyle = FontStyles.Bold;
-        labelTmp.alignment = TextAlignmentOptions.MidlineLeft;
-        labelTmp.color = new Color(1f, 0.96f, 0.88f, 1f);
-
-        promptObj.SetActive(false); // Mặc định ẩn, khi lại gần mới hiện
-
-        // ==========================================
-        // B. CẢNH MỞ ĐẦU HỘI THOẠI HAKU (VISUAL NOVEL STYLE)
-        // ==========================================
-        string hakuImgPath = "Assets/Video/Image/Haku_Dialogue_Clean.png";
-        TextureImporter ti = AssetImporter.GetAtPath(hakuImgPath) as TextureImporter;
-        if (ti != null && (ti.textureType != TextureImporterType.Sprite || ti.spriteImportMode != SpriteImportMode.Single))
-        {
-            ti.textureType = TextureImporterType.Sprite;
-            ti.spriteImportMode = SpriteImportMode.Single;
-            ti.alphaIsTransparency = true;
-            ti.SaveAndReimport();
-        }
-        Sprite hakuSprite = AssetDatabase.LoadAssetAtPath<Sprite>(hakuImgPath);
-
-        GameObject welcomeObj = CreateUIElement("Panel_Welcome", canvasObj.transform);
-        StretchFull(welcomeObj.GetComponent<RectTransform>());
-        
-        // Nền tối mờ toàn màn hình
-        Image welcomeBackdrop = welcomeObj.AddComponent<Image>();
-        if (whiteSprite != null) welcomeBackdrop.sprite = whiteSprite;
-        welcomeBackdrop.color = new Color(0.01f, 0.01f, 0.02f, 0.96f);
-
-        // Nút bấm vô hình bao trùm toàn màn hình để người chơi click bất kỳ đâu cũng next câu
-        Button screenClickBtn = welcomeObj.AddComponent<Button>();
-        screenClickBtn.transition = Selectable.Transition.None;
-
-        // Container giữ đúng tỷ lệ hình nền Haku (1024x554 hoặc Fullscreen)
-        GameObject cutsceneContainer = CreateUIElement("Cutscene_Haku", welcomeObj.transform);
-        StretchFull(cutsceneContainer.GetComponent<RectTransform>());
-        Image hakuImg = cutsceneContainer.AddComponent<Image>();
-        if (hakuSprite != null) hakuImg.sprite = hakuSprite;
-        hakuImg.preserveAspect = true;
-
-        // Khung hiển thị nội dung câu thoại (TextMeshPro) nằm đúng vị trí khung chat
-        GameObject dialogueTextObj = CreateUIElement("Text_DialogueContent", cutsceneContainer.transform);
-        RectTransform dtRt = dialogueTextObj.GetComponent<RectTransform>();
-        // Căn đúng vào vùng lòng khung thoại: x từ 17% đến 84%, y từ 10% đến 25%
-        dtRt.anchorMin = new Vector2(0.17f, 0.095f);
-        dtRt.anchorMax = new Vector2(0.84f, 0.245f);
-        dtRt.offsetMin = Vector2.zero;
-        dtRt.offsetMax = Vector2.zero;
-
-        TextMeshProUGUI dialogueTmp = AddCrispTMP(dialogueTextObj);
-        dialogueTmp.fontSize = 27;
-        dialogueTmp.lineSpacing = 14;
-        dialogueTmp.alignment = TextAlignmentOptions.TopLeft;
-        dialogueTmp.color = new Color(0.96f, 0.91f, 0.82f, 1f); // Màu kem ngà phong cách visual novel
-        dialogueTmp.enableWordWrapping = true;
-        dialogueTmp.text = "";
-
-        Shadow dtShadow = dialogueTextObj.AddComponent<Shadow>();
-        dtShadow.effectColor = new Color(0.05f, 0.02f, 0.02f, 0.85f);
-        dtShadow.effectDistance = new Vector2(1.5f, -1.5f);
-
-        // Nút gợi ý TIẾP TỤC ▽ ở góc dưới bên phải
-        GameObject continuePromptObj = CreateUIElement("Prompt_TiepTuc", cutsceneContainer.transform);
-        RectTransform cpRt = continuePromptObj.GetComponent<RectTransform>();
-        cpRt.anchorMin = new Vector2(0.76f, 0.02f);
-        cpRt.anchorMax = new Vector2(0.93f, 0.08f);
-        cpRt.offsetMin = Vector2.zero;
-        cpRt.offsetMax = Vector2.zero;
-
-        TextMeshProUGUI cpTmp = AddCrispTMP(continuePromptObj);
-        cpTmp.text = "TIẾP TỤC  ▼";
-        cpTmp.fontSize = 20;
-        cpTmp.fontStyle = FontStyles.Bold;
-        cpTmp.alignment = TextAlignmentOptions.MidlineRight;
-        cpTmp.color = new Color(0.96f, 0.78f, 0.42f, 1f); // Màu vàng cam ấm áp
-
-        Shadow cpShadow = continuePromptObj.AddComponent<Shadow>();
-        cpShadow.effectColor = new Color(0.08f, 0.03f, 0.03f, 0.9f);
-        cpShadow.effectDistance = new Vector2(2f, -2f);
-
-        // Nguồn âm thanh click khi chuyển thoại
-        AudioSource audioSource = welcomeObj.AddComponent<AudioSource>();
-        audioSource.playOnAwake = false;
-        AudioClip clickClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Video/Sound/YTSave_YouTube_Mouse-Click-Sound-Effect_Media_i0DON3AjhW4_009_128k.mp3");
-
-        // Gắn controller quản lý hội thoại
-        IntroDialogueController dialogueCtrl = welcomeObj.AddComponent<IntroDialogueController>();
-        dialogueCtrl.dialoguePanel = welcomeObj;
-        dialogueCtrl.backgroundImage = hakuImg;
-        dialogueCtrl.dialogueText = dialogueTmp;
-        dialogueCtrl.continuePrompt = continuePromptObj;
-        dialogueCtrl.fullScreenClickButton = screenClickBtn;
-        dialogueCtrl.typingSpeed = 0.032f;
-        dialogueCtrl.audioSource = audioSource;
-        dialogueCtrl.advanceSound = clickClip;
-        dialogueCtrl.dialogueLines = new string[]
-        {
-            "Chào bạn! Tôi là Haku, nhân viên của công viên này. Rất vui được đón tiếp bạn đến với thế giới giải trí kỳ thú!",
-            "Đầu tiên, bạn hãy tiến lại Quầy Bán Vé ngay phía trước để nhận vé tàu lượn siêu tốc nhé.",
-            "Sau khi có vé, hãy đi theo biển chỉ dẫn đến khu vực đường ray để bắt đầu chuyến đi. Chúc bạn có những phút giây thật tuyệt vời!"
-        };
-
-        uiMgr.welcomePanel = welcomeObj;
-        uiMgr.welcomeCloseButton = null;
-
-        // ==========================================
-        // C. GIAO DIỆN CHỌN TRÒ CHƠI (6 Ô PHONG CÁCH SÓC NHÍ)
+        // A. GIAO DIỆN CHỌN TRÒ CHƠI (6 Ô PHONG CÁCH SÓC NHÍ - LUÔN BẬT)
         // ==========================================
         GameObject shopObj = CreateUIElement("Panel_TicketShop", canvasObj.transform);
         StretchFull(shopObj.GetComponent<RectTransform>());
@@ -292,7 +160,7 @@ public static class TicketSystemBuilder
         {
             bool isUnlocked = (i == 0);
             GameObject slotObj = CreateUIElement($"GameSlot_{i + 1}", gridObj.transform);
-            
+
             Image slotBg = slotObj.AddComponent<Image>();
             if (whiteSprite != null) slotBg.sprite = whiteSprite;
             slotBg.color = isUnlocked ? new Color(1f, 0.96f, 0.88f, 1f) : new Color(0.88f, 0.9f, 0.93f, 0.95f);
@@ -303,7 +171,6 @@ public static class TicketSystemBuilder
             outline.effectColor = isUnlocked ? new Color(1f, 0.65f, 0.1f, 1f) : new Color(0.6f, 0.65f, 0.7f, 0.5f);
             outline.effectDistance = new Vector2(4, -4);
 
-            // Ảnh đại diện game
             GameObject previewImgObj = CreateUIElement("GameImage_Placeholder", slotObj.transform);
             RectTransform pRt = previewImgObj.GetComponent<RectTransform>();
             SetAnchors(pRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 25f), new Vector2(260f, 150f));
@@ -311,7 +178,6 @@ public static class TicketSystemBuilder
             if (whiteSprite != null) pImg.sprite = whiteSprite;
             pImg.color = isUnlocked ? new Color(0.92f, 0.55f, 0.2f, 0.85f) : new Color(0.55f, 0.6f, 0.65f, 0.65f);
 
-            // Tên trò chơi ở dưới
             GameObject nameObj = CreateUIElement("GameName", slotObj.transform);
             RectTransform nameRt = nameObj.GetComponent<RectTransform>();
             SetAnchors(nameRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f), new Vector2(0f, 32f), new Vector2(270f, 50f));
@@ -324,14 +190,13 @@ public static class TicketSystemBuilder
 
             if (isUnlocked)
             {
-                // Tag "HOT 🔥"
                 GameObject badge = CreateUIElement("Badge_Hot", slotObj.transform);
                 RectTransform bRt = badge.GetComponent<RectTransform>();
                 SetAnchors(bRt, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-15f, -15f), new Vector2(110f, 32f));
                 Image bImg = badge.AddComponent<Image>();
                 if (whiteSprite != null) bImg.sprite = whiteSprite;
                 bImg.color = new Color(0.95f, 0.2f, 0.2f, 1f);
-                
+
                 GameObject bTxt = CreateUIElement("BadgeText", badge.transform);
                 StretchFull(bTxt.GetComponent<RectTransform>());
                 TextMeshProUGUI bTmp = AddCrispTMP(bTxt);
@@ -345,7 +210,6 @@ public static class TicketSystemBuilder
             }
             else
             {
-                // Biểu tượng khóa chéo và ổ khóa chính giữa
                 GameObject lockOverlay = CreateUIElement("LockOverlay", slotObj.transform);
                 StretchFull(lockOverlay.GetComponent<RectTransform>());
                 Image lockBg = lockOverlay.AddComponent<Image>();
@@ -367,7 +231,7 @@ public static class TicketSystemBuilder
         }
 
         // ==========================================
-        // D. POPUP CHỌN SỐ LƯỢNG VÉ (SLIDER 1 - 99)
+        // B. POPUP CHỌN SỐ LƯỢNG VÉ (SLIDER 1 - 99)
         // ==========================================
         GameObject qtyObj = CreateUIElement("Panel_QuantitySelect", canvasObj.transform);
         StretchFull(qtyObj.GetComponent<RectTransform>());
@@ -386,12 +250,10 @@ public static class TicketSystemBuilder
         qcOutline.effectColor = new Color(0.25f, 0.6f, 0.9f, 0.8f);
         qcOutline.effectDistance = new Vector2(4, -4);
 
-        // Nút X đóng Quantity
         GameObject closeQtyBtn = CreateButton("Btn_CloseQty", qtyCard.transform, new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(40f, 40f), new Color(0.85f, 0.3f, 0.3f, 1f));
         SetButtonText(closeQtyBtn, "✕", 24, Color.white);
         uiMgr.quantityCloseButton = closeQtyBtn.GetComponent<Button>();
 
-        // Tiêu đề
         GameObject qcTitle = CreateUIElement("Title", qtyCard.transform);
         RectTransform qcTitleRt = qcTitle.GetComponent<RectTransform>();
         SetAnchors(qcTitleRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(600f, 50f));
@@ -402,7 +264,6 @@ public static class TicketSystemBuilder
         qcTitleTmp.alignment = TextAlignmentOptions.Center;
         qcTitleTmp.color = new Color(1f, 0.88f, 0.45f, 1f);
 
-        // Trò chơi: Tàu lượn siêu tốc
         GameObject gameSub = CreateUIElement("SubTitle", qtyCard.transform);
         RectTransform gsRt = gameSub.GetComponent<RectTransform>();
         SetAnchors(gsRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -95f), new Vector2(600f, 40f));
@@ -412,7 +273,6 @@ public static class TicketSystemBuilder
         gsTmp.alignment = TextAlignmentOptions.Center;
         gsTmp.color = new Color(0.85f, 0.92f, 1f, 0.85f);
 
-        // Hiển thị số lượng to ở giữa (kèm nút - và +)
         GameObject counterContainer = CreateUIElement("CounterContainer", qtyCard.transform);
         RectTransform ccRt = counterContainer.GetComponent<RectTransform>();
         SetAnchors(ccRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 40f), new Vector2(380f, 80f));
@@ -436,7 +296,6 @@ public static class TicketSystemBuilder
         SetButtonText(plusBtnObj, "+", 32, Color.white);
         uiMgr.increaseButton = plusBtnObj.GetComponent<Button>();
 
-        // Thanh trượt Slider 1 - 99
         GameObject sliderObj = CreateUIElement("Slider_Tickets", qtyCard.transform);
         RectTransform sRt = sliderObj.GetComponent<RectTransform>();
         SetAnchors(sRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(460f, 32f));
@@ -491,7 +350,6 @@ public static class TicketSystemBuilder
         maxTmp.alignment = TextAlignmentOptions.Center;
         maxTmp.color = Color.gray;
 
-        // Tổng tiền
         GameObject totalObj = CreateUIElement("Text_TotalPrice", qtyCard.transform);
         RectTransform totalRt = totalObj.GetComponent<RectTransform>();
         SetAnchors(totalRt, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 120f), new Vector2(500f, 40f));
@@ -503,7 +361,6 @@ public static class TicketSystemBuilder
         totalTmp.color = new Color(0.4f, 1f, 0.6f, 1f);
         uiMgr.totalPriceText = totalTmp;
 
-        // Nút Xác Nhận Mua
         GameObject confirmBtnObj = CreateButton("Btn_ConfirmBuy", qtyCard.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(280f, 55f), new Color(0.18f, 0.72f, 0.35f, 1f));
         SetButtonText(confirmBtnObj, "XÁC NHẬN MUA VÉ", 22, Color.white);
         uiMgr.confirmBuyButton = confirmBtnObj.GetComponent<Button>();
@@ -511,7 +368,7 @@ public static class TicketSystemBuilder
         uiMgr.quantityPanel = qtyObj;
 
         // ==========================================
-        // E. POPUP MUA VÉ THÀNH CÔNG
+        // C. POPUP MUA VÉ THÀNH CÔNG
         // ==========================================
         GameObject successObj = CreateUIElement("Panel_SuccessNotice", canvasObj.transform);
         StretchFull(successObj.GetComponent<RectTransform>());
@@ -530,7 +387,6 @@ public static class TicketSystemBuilder
         scOutline.effectColor = new Color(0.2f, 0.8f, 0.4f, 0.8f);
         scOutline.effectDistance = new Vector2(4, -4);
 
-        // Icon tích xanh thành công
         GameObject sIcon = CreateUIElement("CheckmarkIcon", sCard.transform);
         SetAnchors(sIcon.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(80f, 80f));
         TextMeshProUGUI sIconTmp = AddCrispTMP(sIcon);
@@ -540,7 +396,6 @@ public static class TicketSystemBuilder
         sIconTmp.alignment = TextAlignmentOptions.Center;
         sIconTmp.color = new Color(0.25f, 0.9f, 0.45f, 1f);
 
-        // Tiêu đề
         GameObject scTitle = CreateUIElement("Title", sCard.transform);
         SetAnchors(scTitle.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(500f, 40f));
         TextMeshProUGUI scTitleTmp = AddCrispTMP(scTitle);
@@ -550,7 +405,6 @@ public static class TicketSystemBuilder
         scTitleTmp.alignment = TextAlignmentOptions.Center;
         scTitleTmp.color = Color.white;
 
-        // Nội dung chi tiết
         GameObject scMsg = CreateUIElement("Message", sCard.transform);
         SetAnchors(scMsg.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -15f), new Vector2(540f, 100f));
         TextMeshProUGUI scMsgTmp = AddCrispTMP(scMsg);
@@ -560,12 +414,10 @@ public static class TicketSystemBuilder
         scMsgTmp.color = new Color(0.9f, 0.95f, 1f, 0.9f);
         uiMgr.successMessageText = scMsgTmp;
 
-        // Nút OK
         GameObject okBtnObj = CreateButton("Btn_OkSuccess", sCard.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(220f, 50f), new Color(0.2f, 0.65f, 0.95f, 1f));
         SetButtonText(okBtnObj, "HOÀN TẤT", 22, Color.white);
         uiMgr.successOkButton = okBtnObj.GetComponent<Button>();
 
-        // Nút X ở góc
         GameObject closeScBtn = CreateButton("Btn_CloseSc", sCard.transform, new Vector2(1f, 1f), new Vector2(-25f, -25f), new Vector2(36f, 36f), new Color(0.85f, 0.3f, 0.3f, 1f));
         SetButtonText(closeScBtn, "✕", 20, Color.white);
         uiMgr.successCloseButton = closeScBtn.GetComponent<Button>();
@@ -573,7 +425,7 @@ public static class TicketSystemBuilder
         uiMgr.successPanel = successObj;
 
         // ==========================================
-        // F. TOAST THÔNG BÁO KHÓA GAME
+        // D. TOAST THÔNG BÁO KHÓA GAME
         // ==========================================
         GameObject noticeObj = CreateUIElement("Panel_LockedToast", canvasObj.transform);
         SetAnchors(noticeObj.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 100f), new Vector2(540f, 70f));
@@ -594,16 +446,12 @@ public static class TicketSystemBuilder
         noticeObj.SetActive(false);
 
         // ==========================================
-        // G. GẮN COMPONENT TƯƠNG TÁC VÀO QuayBanVe
+        // E. GẮN COMPONENT TƯƠNG TÁC VÀO QuayBanVe
         // ==========================================
-        GameObject boothObj = GameObject.Find("QuayBanVe");
         if (boothObj != null)
         {
             TicketBoothInteractable booth = boothObj.GetComponent<TicketBoothInteractable>();
             if (booth == null) booth = boothObj.AddComponent<TicketBoothInteractable>();
-            
-            booth.interactionDistance = 4.0f;
-            booth.interactionPromptUI = promptObj;
 
             BoxCollider boxCol = boothObj.GetComponent<BoxCollider>();
             if (boxCol == null)
@@ -615,16 +463,15 @@ public static class TicketSystemBuilder
             EditorUtility.SetDirty(boothObj);
         }
 
-        // Let Unity save with the user's normal scene workflow.
         EditorUtility.SetDirty(canvasObj);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
         Undo.CollapseUndoOperations(groupIndex);
 
-        Debug.Log("<color=#00FF66><b>[TicketSystemBuilder] Hoàn tất dựng hệ thống mua vé với font sắc nét, UI Sóc Nhí tươi mới, phím F nhạy!</b></color>");
+        Debug.Log("<color=#00FF66><b>[TicketSystemBuilder] Hoàn tất dựng bảng vé cố định World Space!</b></color>");
         if (!silent)
         {
-            EditorUtility.DisplayDialog("Ticket System Setup", "Đã cập nhật hệ thống mua vé:\n\n1. Prompt [F] lớn, tương phản cao và dễ đọc.\n2. Tương tác tính từ mép collider của quầy.\n3. Box Collider luôn bật Is Trigger.\n4. Esc hoặc nút X đóng giao diện và trả điều khiển cho nhân vật.", "Đã hiểu");
+            EditorUtility.DisplayDialog("Ticket System Setup", "Đã tạo bảng vé cố định trước quầy thành công!", "Đã hiểu");
         }
     }
 

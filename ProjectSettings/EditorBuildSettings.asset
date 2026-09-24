@@ -11,7 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ParkScene.unity
     guid: a61e1996f6330f940a8baec1dd037c49
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/RCScene.unity
     guid: 55daccc09a3b69647bbab145b54a3ab3
   m_configObjects:
