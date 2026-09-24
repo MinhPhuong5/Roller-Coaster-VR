@@ -1,0 +1,10 @@
+# ninja log v5
+42	7052	8119476182861161	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	d43290a331c73a9
+193	7065	8119476182997785	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	2fd3e65f17f3a13c
+29	7077	8119476183211102	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	a7a350e557517b4c
+205	7097	8119476183367692	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	3828c18753782d3d
+17	7175	8119476184191713	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	e4b267869e7ccda0
+221	7451	8119476186985205	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	87dd662c9e08d545
+180	7557	8119476188036763	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	9eccdc8d1af7b0c1
+1	7637	8119476188821195	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	93eeb5198ae8a85e
+7638	7793	8119476190422923	F:/My Project/Roller Coaster VR/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/5m1z6mwh/obj/arm64-v8a/libgame.so	77d70bb61e1bed5e

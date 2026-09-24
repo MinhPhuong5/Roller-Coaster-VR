@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 /// <summary>Inventory UI riêng, hiện Bento đã thanh toán và sẵn sàng mở rộng cho vé/đồ ăn khác.</summary>
 public class InventoryUIManager : MonoBehaviour
@@ -32,22 +33,50 @@ public class InventoryUIManager : MonoBehaviour
     private readonly Color gold = new Color(1f, .66f, .25f, 1f);
     private readonly Color cream = new Color(1f, .94f, .84f, 1f);
 
+    // InputAction cho tay cầm Quest (nút Menu hoặc nút secondary Y trên tay trái)
+    private InputAction vrInventoryAction;
+
+    private void Awake()
+    {
+        vrInventoryAction = new InputAction(type: InputActionType.Button);
+        vrInventoryAction.AddBinding("<XRController>{LeftHand}/secondaryButton"); // Nút Y
+        vrInventoryAction.AddBinding("<XRController>{LeftHand}/menuButton");      // Nút Menu
+    }
+
+    private void OnEnable() => vrInventoryAction.Enable();
+    private void OnDisable() => vrInventoryAction.Disable();
+
     private void Start()
     {
         purchases = GetComponent<BentoPurchaseManager>();
-        ticketShop = Object.FindFirstObjectByType<TicketShopUIManager>();
+        ticketShop = Object.FindAnyObjectByType<TicketShopUIManager>();
         BuildUi();
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.I) && !IsPurchaseModalOpen()) Toggle();
-        if (ticketConfirmPanel != null && ticketConfirmPanel.activeSelf && Input.GetKeyDown(KeyCode.Escape))
+        bool isIPressed = Keyboard.current != null && Keyboard.current.iKey.wasPressedThisFrame;
+        bool isVrPressed = vrInventoryAction != null && vrInventoryAction.WasPressedThisFrame();
+
+        // Mở/Đóng Túi đồ bằng phím I hoặc nút Y tay trái VR
+        if ((isIPressed || isVrPressed) && !IsPurchaseModalOpen())
         {
-            CancelUseTicket();
-            return;
+            Toggle();
         }
-        if (panel != null && panel.activeSelf && Input.GetKeyDown(KeyCode.Escape)) Close();
+
+        // Phím Escape để đóng nhanh trên PC
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            if (ticketConfirmPanel != null && ticketConfirmPanel.activeSelf)
+            {
+                CancelUseTicket();
+                return;
+            }
+            if (panel != null && panel.activeSelf)
+            {
+                Close();
+            }
+        }
     }
 
     private bool IsPurchaseModalOpen() => purchases != null && purchases.IsInvoiceOpen;
@@ -257,8 +286,8 @@ public class InventoryUIManager : MonoBehaviour
 
     private void UseTicket()
     {
-        if (ticketShop == null) ticketShop = Object.FindFirstObjectByType<TicketShopUIManager>();
-        RollerCoasterInteraction coaster = Object.FindFirstObjectByType<RollerCoasterInteraction>();
+        if (ticketShop == null) ticketShop = Object.FindAnyObjectByType<TicketShopUIManager>();
+        RollerCoasterInteraction coaster = Object.FindAnyObjectByType<RollerCoasterInteraction>();
         if (ticketShop == null || coaster == null || ticketShop.PurchasedTicketCount <= 0)
         {
             statusText.text = "Không thể dùng vé lúc này.";
@@ -272,8 +301,8 @@ public class InventoryUIManager : MonoBehaviour
 
     private void ConfirmUseTicket()
     {
-        if (ticketShop == null) ticketShop = Object.FindFirstObjectByType<TicketShopUIManager>();
-        RollerCoasterInteraction coaster = Object.FindFirstObjectByType<RollerCoasterInteraction>();
+        if (ticketShop == null) ticketShop = Object.FindAnyObjectByType<TicketShopUIManager>();
+        RollerCoasterInteraction coaster = Object.FindAnyObjectByType<RollerCoasterInteraction>();
         if (ticketShop == null || coaster == null || !ticketShop.ConsumeTicket())
         {
             CancelUseTicket();
@@ -295,7 +324,7 @@ public class InventoryUIManager : MonoBehaviour
     private void Refresh()
     {
         int count = purchases != null ? purchases.OwnedBentoCount : 0;
-        if (ticketShop == null) ticketShop = Object.FindFirstObjectByType<TicketShopUIManager>();
+        if (ticketShop == null) ticketShop = Object.FindAnyObjectByType<TicketShopUIManager>();
         int ticketCount = ticketShop != null ? ticketShop.PurchasedTicketCount : 0;
         bool showFood = selectedCategory == "TẤT CẢ" || selectedCategory == "ĐỒ ĂN";
         bool showTickets = selectedCategory == "TẤT CẢ" || selectedCategory == "VÉ";
@@ -350,8 +379,12 @@ public class InventoryUIManager : MonoBehaviour
 
     private void SetPlayerLocked(bool openingInventory)
     {
-        AnimatorChihiro player = Object.FindFirstObjectByType<AnimatorChihiro>();
+        AnimatorChihiro player = Object.FindAnyObjectByType<AnimatorChihiro>();
         if (player != null) player.SetInputLocked(openingInventory || SeatInteraction.IsPlayerSitting);
+
+        XRFallbackWalkController walk = Object.FindAnyObjectByType<XRFallbackWalkController>();
+        if (walk != null) walk.enabled = !openingInventory;
+
         Cursor.lockState = openingInventory ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = openingInventory;
     }

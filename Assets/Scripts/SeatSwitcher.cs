@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using TMPro;
 
 public class SeatSwitcher : MonoBehaviour
@@ -92,21 +93,25 @@ public class SeatSwitcher : MonoBehaviour
         {
             if (!isRiding && !isHandlingExit)
             {
-                if (Input.GetKeyDown(KeyCode.Tab))
+                // New Input System: Phím Tab để đổi ghế nhanh trên PC
+                if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame)
                 {
                     NextSeat();
                 }
 
-                // Giữ chuột phải để lia góc nhìn ngắm cảnh sảnh ga
-                if (Input.GetMouseButtonDown(1))
+                // New Input System: Giữ chuột phải để lia góc nhìn ngắm cảnh sảnh ga trên PC
+                if (Mouse.current != null)
                 {
-                    Cursor.lockState = CursorLockMode.Locked;
-                    Cursor.visible = false;
-                }
-                else if (Input.GetMouseButtonUp(1))
-                {
-                    Cursor.lockState = CursorLockMode.None;
-                    Cursor.visible = true;
+                    if (Mouse.current.rightButton.wasPressedThisFrame)
+                    {
+                        Cursor.lockState = CursorLockMode.Locked;
+                        Cursor.visible = false;
+                    }
+                    else if (Mouse.current.rightButton.wasReleasedThisFrame)
+                    {
+                        Cursor.lockState = CursorLockMode.None;
+                        Cursor.visible = true;
+                    }
                 }
             }
         }
@@ -373,7 +378,7 @@ public class SeatSwitcher : MonoBehaviour
     {
         isHandlingExit = true;
 
-        // CHỜ ĐỦ THỜI GIAN ĐỂ TÀU PHANH TỪ TỪ VỀ BẾN DỪNG HẲN (tránh hiện UI sớm khi tàu còn trượt)
+        // Chờ đủ thời gian để tàu phanh từ từ về bến dừng hẳn
         yield return new WaitForSeconds(3.5f);
 
         if (stationGate != null && stationGate.gateAudioSource != null)
@@ -432,7 +437,7 @@ public class SeatSwitcher : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // 4. HIỆN BẢNG HỎI CHƠI LẠI (GameOverGroup), ẨN BẢNG CHỌN GHẾ
+        // 4. Hiện bảng hỏi chơi lại
         if (uiPanel != null) uiPanel.SetActive(true);
         if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
         if (gameOverPanel != null)

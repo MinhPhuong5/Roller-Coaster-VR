@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: 637078ccefdf27944ba3afd636949077, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -3192,8 +3192,8 @@ Light:
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
+    m_Bias: 0.1
+    m_NormalBias: 0.5
     m_NearPlane: 0.2
     m_CullingMatrixOverride:
       e00: 1
@@ -3263,7 +3263,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
-  m_UsePipelineSettings: 1
+  m_UsePipelineSettings: 0
   m_AdditionalLightsShadowResolutionTier: 2
   m_CustomShadowLayers: 0
   m_LightCookieSize: {x: 1, y: 1}
@@ -9842,7 +9842,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &232264307
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10070,7 +10070,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -16.750122, y: -6.6249695}
+  m_AnchoredPosition: {x: -16.750488, y: -6.624939}
   m_SizeDelta: {x: -72.5, y: -53.25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &232402512
@@ -21226,9 +21226,10 @@ GameObject:
   - component: {fileID: 500994007}
   - component: {fileID: 500994006}
   - component: {fileID: 500994005}
-  - component: {fileID: 500994004}
   - component: {fileID: 500994003}
   - component: {fileID: 500994008}
+  - component: {fileID: 500994009}
+  - component: {fileID: 500994010}
   m_Layer: 0
   m_Name: Canvas_TicketSystem
   m_TagString: Untagged
@@ -21248,8 +21249,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0276729097e4fc439f8e4ddfccc385d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TicketShopUIManager
-  welcomePanel: {fileID: 232264306}
-  welcomeCloseButton: {fileID: 0}
   shopPanel: {fileID: 284776268}
   shopCloseButton: {fileID: 1997926414}
   rollerCoasterButton: {fileID: 256127854}
@@ -21276,23 +21275,6 @@ MonoBehaviour:
   ticketPrice: 50000
   currentTicketCount: 1
   purchasedTickets: 0
---- !u!114 &500994004
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 500994002}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
-  m_IgnoreReversedGraphics: 1
-  m_BlockingObjects: 0
-  m_BlockingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
 --- !u!114 &500994005
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21315,7 +21297,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!223 &500994006
 Canvas:
   m_ObjectHideFlags: 0
@@ -21325,8 +21307,8 @@ Canvas:
   m_GameObject: {fileID: 500994002}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
-  m_Camera: {fileID: 0}
+  m_RenderMode: 2
+  m_Camera: {fileID: 1460234258}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
@@ -21347,10 +21329,10 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 500994002}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
-  m_ConstrainProportionsScale: 0
+  m_LocalRotation: {x: 0.031526383, y: -0.7215682, z: 0.041069582, w: 0.6904048}
+  m_LocalPosition: {x: 0, y: 0, z: 1193.11}
+  m_LocalScale: {x: 0.03, y: 0.03, z: 0.03}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 132091953}
   - {fileID: 232264312}
@@ -21359,12 +21341,12 @@ RectTransform:
   - {fileID: 245131742}
   - {fileID: 340852010}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 5.9, y: -92.495, z: 0.646}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -1312.869, y: 937.16174}
+  m_SizeDelta: {x: 350, y: 350}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &500994008
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21391,6 +21373,42 @@ MonoBehaviour:
   totalText: {fileID: 0}
   payButton: {fileID: 0}
   cancelButton: {fileID: 0}
+--- !u!114 &500994009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500994002}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7951c64acb0fa62458bf30a60089fe2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster
+  m_IgnoreReversedGraphics: 0
+  m_CheckFor2DOcclusion: 0
+  m_CheckFor3DOcclusion: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RaycastTriggerInteraction: 1
+--- !u!114 &500994010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500994002}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &502028729
 GameObject:
   m_ObjectHideFlags: 0
@@ -28447,6 +28465,7 @@ RectTransform:
   - {fileID: 1774091118}
   - {fileID: 1030607011}
   - {fileID: 1288084471}
+  - {fileID: 1738291809}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 179.218, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -45365,8 +45384,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 985913972}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: 0.0000000018626447, w: 1}
+  m_LocalPosition: {x: -0.000041081355, y: 0, z: -0.00039907606}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -45389,6 +45408,7 @@ MonoBehaviour:
   cancelCloseButton: {fileID: 30116186}
   modalTitleText: {fileID: 933363217}
   modalMessageText: {fileID: 1794986808}
+  activationDistance: 5
   stationEntryPoint: {fileID: 1077804851}
   xrOriginObject: {fileID: 946558671}
   seatSwitcher: {fileID: 62444605}
@@ -45396,7 +45416,6 @@ MonoBehaviour:
   promptText: {fileID: 0}
   mainGameSceneName: Game
   mainGameSceneIndex: 2
-  isPlayerInZone: 1
 --- !u!65 &985913975
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -49637,6 +49656,10 @@ PrefabInstance:
     - target: {fileID: 6157689237579841772, guid: c0f3a65a430634949b1158538cc2cbcf, type: 3}
       propertyPath: m_text
       value: "B\u1EA1n mu\u1ED1n  ti\u1EBFp?"
+      objectReference: {fileID: 0}
+    - target: {fileID: 6339315314316567795, guid: c0f3a65a430634949b1158538cc2cbcf, type: 3}
+      propertyPath: numberOfLaps
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6339315314316567795, guid: c0f3a65a430634949b1158538cc2cbcf, type: 3}
       propertyPath: mapReturnPoint
@@ -67505,7 +67528,7 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 8897093224900880590, guid: d881c30cc4ec1a341b3aad8f28756002, type: 3}
-      insertIndex: -1
+      insertIndex: 0
       addedObject: {fileID: 985913973}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: -5645937942226959685, guid: d881c30cc4ec1a341b3aad8f28756002, type: 3}
@@ -75976,6 +75999,85 @@ Transform:
   - {fileID: 2000640535}
   m_Father: {fileID: 1327296175}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1738291808
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1738291809}
+  - component: {fileID: 1738291811}
+  - component: {fileID: 1738291810}
+  m_Layer: 0
+  m_Name: PlayZone
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1738291809
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738291808}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.0123101305, y: 0.008754684, z: 0.028487977, w: -0.99948007}
+  m_LocalPosition: {x: -54.999584, y: 18.001884, z: -439.99768}
+  m_LocalScale: {x: 100, y: 100, z: 100}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 659362407}
+  m_LocalEulerAnglesHint: {x: -1.439, y: -0.963, z: -3.253}
+--- !u!114 &1738291810
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738291808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d390872021e987e41b113bd022669182, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RollerCoasterInteraction
+  confirmationModalPanel: {fileID: 1030607010}
+  confirmStartButton: {fileID: 541510343}
+  cancelCloseButton: {fileID: 30116186}
+  modalTitleText: {fileID: 933363217}
+  modalMessageText: {fileID: 1794986808}
+  activationDistance: 15
+  stationEntryPoint: {fileID: 1077804851}
+  xrOriginObject: {fileID: 946558671}
+  seatSwitcher: {fileID: 62444605}
+  promptUI: {fileID: 0}
+  promptText: {fileID: 0}
+  mainGameSceneName: Game
+  mainGameSceneIndex: 2
+--- !u!65 &1738291811
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738291808}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 4, y: 3, z: 4}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!1 &1740885476
 GameObject:
   m_ObjectHideFlags: 0
@@ -76544,7 +76646,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1297.93
+      value: -1267.8
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalPosition.y
@@ -76552,23 +76654,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1033.612
+      value: 1225.87
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7034914
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.7107038
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -76576,7 +76678,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 180
       objectReference: {fileID: 0}
     - target: {fileID: 6330662525055368096, guid: eaeb6621708ffd9448eadd6e04b39279, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -77419,6 +77521,58 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1770219800}
   m_CullTransparentMesh: 1
+--- !u!1 &1770888256
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1770888257}
+  - component: {fileID: 1770888258}
+  m_Layer: 0
+  m_Name: BuyTicketZone
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1770888257
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1770888256}
+  m_LocalRotation: {x: -0.5308163, y: -0.51926345, z: -0.47373128, w: -0.47347468}
+  m_LocalPosition: {x: 0, y: 0, z: 1.290198}
+  m_LocalScale: {x: 0.0019999999, y: 0.0019999996, z: 0.0019999996}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 316415451642367044}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -2.8520393, y: -0.1503601}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1770888258
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1770888256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5174eafbfdbab1544b824704b611008d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TicketBoothTriggerZone
+  ticketShopUI: {fileID: 0}
+  activationDistance: 20
+  audioSource: {fileID: 0}
+  openSound: {fileID: 0}
 --- !u!1 &1771225481
 GameObject:
   m_ObjectHideFlags: 0
@@ -102884,6 +103038,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 311119679355375961}
+  - {fileID: 1770888257}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 178.119}
 --- !u!65 &316415451642367045
@@ -102919,11 +103074,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e4b1e5916c7b4f498df1bb1622a983c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TicketBoothInteractable
-  playerTransform: {fileID: 0}
-  interactionDistance: 4
-  interactionPromptUI: {fileID: 132091952}
   audioSource: {fileID: 0}
-  openShopSound: {fileID: 0}
+  clickSound: {fileID: 0}
 --- !u!4 &316573053376177327
 Transform:
   m_ObjectHideFlags: 0

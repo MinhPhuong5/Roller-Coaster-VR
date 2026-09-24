@@ -53,7 +53,7 @@ MonoBehaviour:
   m_AdditionalLightsShadowResolutionTierHigh: 1024
   m_ReflectionProbeBlending: 0
   m_ReflectionProbeBoxProjection: 0
-  m_ReflectionProbeAtlas: 1
+  m_ReflectionProbeAtlas: 0
   m_ShadowDistance: 2.5
   m_ShadowCascadeCount: 1
   m_Cascade2Split: 0.095
@@ -74,7 +74,6 @@ MonoBehaviour:
   m_MixedLightingSupported: 1
   m_SupportsLightCookies: 1
   m_SupportsLightLayers: 0
-  m_DebugLevel: 0
   m_StoreActionsOptimization: 0
   m_UseAdaptivePerformance: 1
   m_ColorGradingMode: 0
@@ -110,7 +109,7 @@ MonoBehaviour:
   m_PrefilterDebugKeywords: 1
   m_PrefilterWriteRenderingLayers: 1
   m_PrefilterHDROutput: 1
-  m_PrefilterAlphaOutput: 1
+  m_PrefilterAlphaOutput: 0
   m_PrefilterSSAODepthNormals: 1
   m_PrefilterSSAOSourceDepthLow: 1
   m_PrefilterSSAOSourceDepthMedium: 1
@@ -128,14 +127,15 @@ MonoBehaviour:
   m_PrefilterSoftShadowsQualityHigh: 1
   m_PrefilterSoftShadows: 1
   m_PrefilterScreenCoord: 1
-  m_PrefilterScreenSpaceIrradiance: 0
+  m_PrefilterScreenSpaceIrradiance: 1
   m_PrefilterNativeRenderPass: 1
   m_PrefilterUseLegacyLightmaps: 0
-  m_PrefilterBicubicLightmapSampling: 0
-  m_PrefilterReflectionProbeRotation: 0
-  m_PrefilterReflectionProbeBlending: 0
-  m_PrefilterReflectionProbeBoxProjection: 0
-  m_PrefilterReflectionProbeAtlas: 0
+  m_PrefilterBicubicLightmapSampling: 1
+  m_PrefilterReflectionProbeRotation: 1
+  m_PrefilterReflectionProbeBlending: 1
+  m_PrefilterReflectionProbeBoxProjection: 1
+  m_PrefilterReflectionProbeAtlas: 1
+  m_PrefilterPointSamplingUpsampling: 1
   m_ShaderVariantLogLevel: 0
   m_ShadowCascades: 0
   m_Textures:
