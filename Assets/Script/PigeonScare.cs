@@ -124,29 +124,13 @@ public class PigeonScare : MonoBehaviour
 
     private Vector3 ChooseFlightTarget(Vector3 playerPosition, Vector3 fallbackDirection)
     {
-        Transform bestPerch = null;
-        float bestScore = float.NegativeInfinity;
-        Vector3 awayFromPlayer = homePosition - playerPosition;
-        awayFromPlayer.y = 0f;
-        awayFromPlayer.Normalize();
-
-        if (flightPerches != null) foreach (Transform perch in flightPerches)
+        if (flightPerches != null)
         {
-            if (perch == null) continue;
-            Vector3 directionToPerch = perch.position - homePosition;
-            directionToPerch.y = 0f;
-            if (directionToPerch.sqrMagnitude < 0.01f) continue;
-
-            float score = Vector3.Dot(awayFromPlayer, directionToPerch.normalized);
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestPerch = perch;
-            }
+            Transform[] validPerches = System.Array.FindAll(flightPerches, perch => perch != null);
+            if (validPerches.Length > 0)
+                return validPerches[Random.Range(0, validPerches.Length)].position;
         }
 
-        return bestPerch != null
-            ? bestPerch.position
-            : homePosition + fallbackDirection.normalized * flightDistance + Vector3.up * flightHeight;
+        return homePosition + fallbackDirection.normalized * flightDistance + Vector3.up * flightHeight;
     }
 }
