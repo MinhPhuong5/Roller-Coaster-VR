@@ -18,7 +18,6 @@ public class CloudDrift : MonoBehaviour
 
     private void Update()
     {
-        if (!IntroDialogueController.GameStarted) return;
 
         basePosition += windVelocity * Time.deltaTime;
         float sway = Mathf.Sin(Time.time * swaySpeed + phase) * swayHeight;

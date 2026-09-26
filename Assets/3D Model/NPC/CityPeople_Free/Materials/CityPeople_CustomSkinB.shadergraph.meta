@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: b042463303c6a91468f4e932b75b28ba
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 625f186215c104763be7675aa2d941aa, type: 3}
+AssetOrigin:
+  serializedVersion: 1
+  productId: 325204
+  packageName: 'PolyPeople Series - City People [Free]'
+  packageVersion: 1.1
+  assetPath: Assets/CityPeople_Free/Materials/CityPeople_CustomSkinB.shadergraph
+  uploadId: 784194

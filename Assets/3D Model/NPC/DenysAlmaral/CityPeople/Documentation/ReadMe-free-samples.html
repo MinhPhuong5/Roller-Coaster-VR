@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+            <html>
+                <head>                    
+                    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+                    <title>ReadMe-free-samples.md</title>
+                    <style type="text/css">
+                    /*
+Copyright (c) 2017 Chris Patuzzo
+https://twitter.com/chrispatuzzo
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+body {
+  font-family: Helvetica, arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background-color: white;
+  padding: 30px;
+  color: #333;
+}
+
+body &gt; *:first-child {
+  margin-top: 0 !important;
+}
+
+body &gt; *:last-child {
+  margin-bottom: 0 !important;
+}
+
+a {
+  color: #4183C4;
+  text-decoration: none;
+}
+
+a.absent {
+  color: #cc0000;
+}
+
+a.anchor {
+  display: block;
+  padding-left: 30px;
+  margin-left: -30px;
+  cursor: pointer;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 20px 0 10px;
+  padding: 0;
+  font-weight: bold;
+  -webkit-font-smoothing: antialiased;
+  cursor: text;
+  position: relative;
+}
+
+h2:first-child, h1:first-child, h1:first-child + h2, h3:first-child, h4:first-child, h5:first-child, h6:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+h1:hover a.anchor, h2:hover a.anchor, h3:hover a.anchor, h4:hover a.anchor, h5:hover a.anchor, h6:hover a.anchor {
+  text-decoration: none;
+}
+
+h1 tt, h1 code {
+  font-size: inherit;
+}
+
+h2 tt, h2 code {
+  font-size: inherit;
+}
+
+h3 tt, h3 code {
+  font-size: inherit;
+}
+
+h4 tt, h4 code {
+  font-size: inherit;
+}
+
+h5 tt, h5 code {
+  font-size: inherit;
+}
+
+h6 tt, h6 code {
+  font-size: inherit;
+}
+
+h1 {
+  font-size: 28px;
+  color: black;
+}
+
+h2 {
+  font-size: 24px;
+  border-bottom: 1px solid #cccccc;
+  color: black;
+}
+
+h3 {
+  font-size: 18px;
+}
+
+h4 {
+  font-size: 16px;
+}
+
+h5 {
+  font-size: 14px;
+}
+
+h6 {
+  color: #777777;
+  font-size: 14px;
+}
+
+p, blockquote, ul, ol, dl, li, table, pre {
+  margin: 15px 0;
+}
+
+/*
+hr {
+  border: 0 none;
+  color: #cccccc;
+  height: 4px;
+  padding: 0;
+}
+*/
+body &gt; h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+body &gt; h1:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+body &gt; h1:first-child + h2 {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+body &gt; h3:first-child, body &gt; h4:first-child, body &gt; h5:first-child, body &gt; h6:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+a:first-child h1, a:first-child h2, a:first-child h3, a:first-child h4, a:first-child h5, a:first-child h6 {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+h1 p, h2 p, h3 p, h4 p, h5 p, h6 p {
+  margin-top: 0;
+}
+
+li p.first {
+  display: inline-block;
+}
+
+ul, ol {
+  padding-left: 30px;
+}
+
+ul :first-child, ol :first-child {
+  margin-top: 0;
+}
+
+ul :last-child, ol :last-child {
+  margin-bottom: 0;
+}
+
+dl {
+  padding: 0;
+}
+
+dl dt {
+  font-size: 14px;
+  font-weight: bold;
+  font-style: italic;
+  padding: 0;
+  margin: 15px 0 5px;
+}
+
+dl dt:first-child {
+  padding: 0;
+}
+
+dl dt &gt; :first-child {
+  margin-top: 0;
+}
+
+dl dt &gt; :last-child {
+  margin-bottom: 0;
+}
+
+dl dd {
+  margin: 0 0 15px;
+  padding: 0 15px;
+}
+
+dl dd &gt; :first-child {
+  margin-top: 0;
+}
+
+dl dd &gt; :last-child {
+  margin-bottom: 0;
+}
+
+blockquote {
+  border-left: 4px solid #dddddd;
+  padding: 0 15px;
+  color: #777777;
+}
+
+blockquote &gt; :first-child {
+  margin-top: 0;
+}
+
+blockquote &gt; :last-child {
+  margin-bottom: 0;
+}
+
+table {
+  padding: 0;
+}
+table tr {
+  border-top: 1px solid #cccccc;
+  background-color: white;
+  margin: 0;
+  padding: 0;
+}
+
+table tr:nth-child(2n) {
+  background-color: #f8f8f8;
+}
+
+table tr th {
+  font-weight: bold;
+  border: 1px solid #cccccc;
+  text-align: left;
+  margin: 0;
+  padding: 6px 13px;
+}
+
+table tr td {
+  border: 1px solid #cccccc;
+  text-align: left;
+  margin: 0;
+  padding: 6px 13px;
+}
+
+table tr th :first-child, table tr td :first-child {
+  margin-top: 0;
+}
+
+table tr th :last-child, table tr td :last-child {
+  margin-bottom: 0;
+}
+
+img {
+  max-width: 100%;
+}
+
+span.frame {
+  display: block;
+  overflow: hidden;
+}
+
+span.frame &gt; span {
+  border: 1px solid #dddddd;
+  display: block;
+  float: left;
+  overflow: hidden;
+  margin: 13px 0 0;
+  padding: 7px;
+  width: auto;
+}
+
+span.frame span img {
+  display: block;
+  float: left;
+}
+
+span.frame span span {
+  clear: both;
+  color: #333333;
+  display: block;
+  padding: 5px 0 0;
+}
+
+span.align-center {
+  display: block;
+  overflow: hidden;
+  clear: both;
+}
+
+span.align-center &gt; span {
+  display: block;
+  overflow: hidden;
+  margin: 13px auto 0;
+  text-align: center;
+}
+
+span.align-center span img {
+  margin: 0 auto;
+  text-align: center;
+}
+
+span.align-right {
+  display: block;
+  overflow: hidden;
+  clear: both;
+}
+
+span.align-right &gt; span {
+  display: block;
+  overflow: hidden;
+  margin: 13px 0 0;
+  text-align: right;
+}
+
+span.align-right span img {
+  margin: 0;
+  text-align: right;
+}
+
+span.float-left {
+  display: block;
+  margin-right: 13px;
+  overflow: hidden;
+  float: left;
+}
+
+span.float-left span {
+  margin: 13px 0 0;
+}
+
+span.float-right {
+  display: block;
+  margin-left: 13px;
+  overflow: hidden;
+  float: right;
+}
+
+span.float-right &gt; span {
+  display: block;
+  overflow: hidden;
+  margin: 13px auto 0;
+  text-align: right;
+}
+
+code, tt {
+  margin: 0 2px;
+  padding: 0 5px;
+  white-space: nowrap;
+  border: 1px solid #eaeaea;
+  background-color: #f8f8f8;
+  border-radius: 3px;
+}
+
+pre code {
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  border: none;
+  background: transparent;
+}
+
+.highlight pre {
+  background-color: #f8f8f8;
+  border: 1px solid #cccccc;
+  font-size: 13px;
+  line-height: 19px;
+  overflow: auto;
+  padding: 6px 10px;
+  border-radius: 3px;
+}
+
+pre {
+  background-color: #f8f8f8;
+  border: 1px solid #cccccc;
+  font-size: 13px;
+  line-height: 19px;
+  overflow: auto;
+  padding: 6px 10px;
+  border-radius: 3px;
+}
+
+pre code, pre tt {
+  background-color: transparent;
+  border: none;
+}
+
+/* Syntax Highlighting */
+
+.plainText {
+ background-color: #FFFFFF;
+ color: #000000;
+}
+.htmlServerSideScript {
+ background-color: #FFFF00;
+}
+.htmlComment {
+ color: #008000;
+}
+.htmlTagDelimiter {
+ color: #0000FF;
+}
+.htmlElementName {
+ color: #A31515;
+}
+.htmlAttributeName {
+ color: #FF0000;
+}
+.htmlAttributeValue {
+ color: #0000FF;
+}
+.htmlOperator {
+ color: #0000FF;
+}
+.comment {
+ color: #008000;
+}
+.xmlDocTag {
+ color: #808080;
+}
+.xmlDocComment {
+ color: #008000;
+}
+.string {
+ color: #A31515;
+}
+.stringCSharpVerbatim {
+ color: #A31515;
+}
+.keyword {
+ color: #0000FF;
+}
+.preprocessorKeyword {
+ color: #0000FF;
+}
+.htmlEntity {
+ color: #FF0000;
+}
+.xmlAttribute {
+ color: #FF0000;
+}
+.xmlAttributeQuotes {
+ color: #000000;
+}
+.xmlAttributeValue {
+ color: #0000FF;
+}
+.xmlCDataSection {
+ color: #808080;
+}
+.xmlComment {
+ color: #008000;
+}
+.xmlDelimiter {
+ color: #0000FF;
+}
+.xmlName {
+ color: #A31515;
+}
+.className {
+ color: #48D1CC;
+}
+.cssSelector {
+ color: #A31515;
+}
+.cssPropertyName {
+ color: #FF0000;
+}
+.cssPropertyValue {
+ color: #0000FF;
+}
+.sqlSystemFunction {
+ color: #FF00FF;
+}
+.powershellAttribute {
+ color: #B0E0E6;
+}
+.powershellOperator {
+ color: #808080;
+}
+.powershellType {
+ color: #008080;
+}
+.powershellVariable {
+ color: #FF4500;
+}
+.type {
+ color: #008080;
+}
+.typeVariable {
+ color: #008080;
+ font-style: italic;
+}
+.namespace {
+ color: #000080;
+}
+.constructor {
+ color: #800080;
+}
+.predefined {
+ color: #000080;
+}
+.pseudoKeyword {
+ color: #000080;
+}
+.stringEscape {
+ color: #808080;
+}
+.controlKeyword {
+ color: #0000FF;
+}
+.number {
+}
+.operator {
+}
+.delimiter {
+}
+.markdownHeader {
+ font-weight: bold;
+}
+.markdownCode {
+ color: #008080;
+}
+.markdownListItem {
+ font-weight: bold;
+}
+.italic {
+ font-style: italic;
+}
+.bold {
+ font-weight: bold;
+}
+
+                    </style>
+                </head>
+                <body style="">
+                <p id="0"><img src="images/IsoCity_screenShot_820w-free.png" alt="" /></p>
+<h1 id="1">City People FREE Samples</h1>
+<p id="3">Welcome to the <strong>City People FREE Samples</strong>! This package provides a group of city characters to bring life to your Unity projects. This is a subset of <a href="https://assetstore.unity.com/packages/3d/characters/city-people-mega-pack-203329"><strong>City People Mega-Pack</strong></a> which contains 120+ of diverse characters.</p>
+<h2 id="5">Table of Contents</h2>
+<ol id="7">
+<li id="7"><a href="#introduction">Introduction</a></li>
+<li id="8"><a href="#whats-new-in-v130">What's New in v1.4.0</a></li>
+<li id="9"><a href="#getting-started">Getting Started</a></li>
+<li id="10"><a href="#demo-scenes">Demo Scenes</a>
+<ul id="11">
+<li id="11"><a href="#demo-scene-1-character-showcase">Demo Scene 1: Character Showcase</a></li>
+<li id="12"><a href="#demo-scene-2-isometric-city">Demo Scene 2: Isometric City</a></li>
+</ul>
+</li>
+<li id="13"><a href="#animations">Animations</a></li>
+<li id="14"><a href="#citypeople-component-script">CityPeople Component Script</a></li>
+<li id="15"><a href="#palette-system-and-uv">Palette System and UV</a></li>
+<li id="16"><a href="#support">Support</a></li>
+</ol>
+<hr id="18" />
+<h2 id="20">Introduction</h2>
+<p id="22">These characters packs are designed to populate your urban environments with a rich variety of animated characters. The Polyart style provides optimized characters, making them suitable for low-end devices and AR/VR simulations.</p>
+<h2 id="24">What's New in v1.4.0</h2>
+<ul id="26">
+<li id="26"><strong>Added two more characters!!:</strong> Construction guy and girl with prosthetic leg.</li>
+<li id="27">Added construction tools and specific animations and demonstrative script.</li>
+<li id="28">Included material converter patch for both ways URP and Built-in</li>
+<li id="29">A Christmas hat!</li>
+</ul>
+<h2 id="31">Quick Start</h2>
+<ol id="33">
+<li id="33"><strong>Import the Package</strong>: Download and import into your Unity project.</li>
+<li id="34"><strong>Explore Demo Scenes</strong>: Open the demo scenes to see the characters in action!</li>
+<li id="35"><strong>URP/Built-in Setup</strong>: Package materials import by default as URP (Models will appear pink on Built-in), to convert to Built-in go to <strong>URP&amp;Built-in</strong> folder and double click the <strong>convert-to-BUILT-IN</strong> package patch.</li>
+<li id="36">From <strong>Prefabs</strong> folder drag &amp; drop any character to your own scene.</li>
+</ol>
+<h2 id="39">Animations</h2>
+<ul id="41">
+<li id="41"><strong>Standard Characters</strong>: A set of common animations suitable to most characters.
+<ul id="42">
+<li id="42">Walking (6)</li>
+<li id="43">Running (4)</li>
+<li id="44">Idle (6)</li>
+<li id="45">Dancing (5)</li>
+<li id="46">Warming Up</li>
+<li id="47">Construction tool usage (7): Drill, Hammer, Handsaw, Pipewrench, Screwdriver, Wrench, Swap tool.</li>
+</ul>
+</li>
+</ul>
+<h2 id="49">Scripts</h2>
+<p id="51"><strong>CityPeople Component Script</strong></p>
+<p id="53">This component script offers basic functionality to show the basic animations and switch palette material.</p>
+<p id="55"><strong>SwapAndToolController</strong></p>
+<p id="57">Located For the construction worker demonstrate how to periodically switch to a random tool and play the matching animation in a loop.</p>
+<h2 id="59">Palette System and UV</h2>
+<p id="60"><img src="images/PaletteTextures.png" alt="" />
+The characters UV have been mapped in a way to make easy the switching of palettes. These textures (acting as palettes) have a standardized structure with areas corresponding to different surfaces of the characters:</p>
+<ul id="63">
+<li id="63">Skin colors</li>
+<li id="64">Hair colors</li>
+<li id="65">Clothes colors</li>
+<li id="66">Dark and Light details.</li>
+</ul>
+<p id="68">A single texture/material pair can be applied to all the characters in this package. And any texture/material can be applied to any character.</p>
+<p id="70">Free tool <a href="https://assetstore.unity.com/packages/tools/painting/da-polypaint-low-poly-customizer-251157">DA Poly Paint</a> can be used to further modify the UV 'painting' by model with ease.</p>
+<h2 id="72">SRP Support</h2>
+<p id="74">Current version default to URP (Universal Render Pipeline).
+Follow the steps to convert to Built-in or rollback to URP at any time.</p>
+<ol id="77">
+<li id="77">Navigate to folder <strong>CityPeople/URP&amp;Built-in</strong></li>
+<li id="78">Double click one of the following packages to apply the patch:</li>
+</ol>
+<ul id="79">
+<li id="79"><strong>Convert-to-BUILT-IN</strong></li>
+<li id="80"><strong>Convert-to-URP</strong></li>
+</ul>
+<p id="82">Note about HDRP: While not converter patch is provided, supporting HDRP would need a few standard steps. Using the material conversion wizard and adjusting lighting accordingly.</p>
+<h2 id="84">Support</h2>
+<p id="86">If you have any questions or need assistance:</p>
+<ul id="88">
+<li id="88"><strong>Email</strong>: <a href="mailto:denys.almaral@gmail.com">denys.almaral@gmail.com</a></li>
+<li id="89"><strong>Website</strong>: <a href="https://denysalmaral.com">DenysAlmaral.com</a></li>
+<li id="90"><strong>Forum</strong>: <a href="https://github.com/piXelicidio/Chat/discussions/2">Github Discussions</a></li>
+</ul>
+<hr id="92" />
+<p id="94">Thank you for downloading <strong>City People FREE Samples</strong>. We hope these assets help you create engaging and fun Unity projects!</p>
+
+                </body>
+            </html>
+            

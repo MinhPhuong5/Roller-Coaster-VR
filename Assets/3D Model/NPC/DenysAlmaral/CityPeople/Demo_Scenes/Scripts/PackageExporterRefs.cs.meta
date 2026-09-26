@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: bca55c8cc0c4e224bad8e5152626b422
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 260446
+  packageName: City People FREE Samples
+  packageVersion: 1.2.0
+  assetPath: Assets/DenysAlmaral/CityPeople/Demo_Scenes/Scripts/PackageExporterRefs.cs
+  uploadId: 833900

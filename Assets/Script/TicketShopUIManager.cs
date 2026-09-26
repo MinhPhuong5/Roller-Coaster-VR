@@ -116,10 +116,6 @@ public class TicketShopUIManager : MonoBehaviour
         if (shopPanel != null) shopPanel.SetActive(false);
     }
 
-    // Giữ hàm này để IntroDialogueController gọi mà không báo lỗi CS1061
-    public void CloseWelcome()
-    {
-    }
 
     public void OpenQuantityPopup()
     {

@@ -34,10 +34,6 @@ public class RollerCoasterInteraction : MonoBehaviour
     [Tooltip("Script quản lý ghế ngồi tàu lượn")]
     public SeatSwitcher seatSwitcher;
 
-    [HideInInspector] public GameObject promptUI;
-    [HideInInspector] public TextMeshProUGUI promptText;
-    [HideInInspector] public string mainGameSceneName = "Game";
-    [HideInInspector] public int mainGameSceneIndex = 2;
 
     private Transform playerTransform;
     private bool isPlayerNearby = false;
