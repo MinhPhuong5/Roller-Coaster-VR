@@ -1,0 +1,23 @@
+■ To use Mixamo animations
+
+The following steps show one way to apply Mixamo animations to the models included in this package.
+
+1. Upload the FBX file from your Unity project to Mixamo.
+
+2. Choose any animation and download it with skin.
+
+3. Import the downloaded FBX into your Unity project.
+
+4. To use the downloaded FBX directly,
+   assign a material to the mesh and set the Rig to Humanoid.
+   Then, drag and drop the animation clip onto the character in the    Scene —
+   Unity will automatically create an Animator and apply the animation.
+
+5. If you want to combine it with other animation clips,
+   you can copy and separate the animation clip from the imported FBX.
+   This clip can be used with the included prefabs by dragging it onto the prefab,
+   or added to any custom Animator Controller.
+
+Note:
+When setting the rig to Humanoid, make sure all bones are correctly assigned in the Configure window.
+Occasionally, optional bones such as Chest may not be auto-assigned and may need to be set manually.
