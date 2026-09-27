@@ -5,9 +5,9 @@ public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Speeds")]
     [Tooltip("Tốc độ đi bộ")]
-    public float walkSpeed = 6.0f;
+    public float walkSpeed = 3.5f;
     [Tooltip("Tốc độ chạy nhanh (khi giữ Shift)")]
-    public float runSpeed = 16.0f;
+    public float runSpeed = 7.0f;
     [Tooltip("Độ mượt khi xoay người theo hướng đi")]
     public float rotationSmoothTime = 0.1f;
     [Tooltip("Độ mượt chuyển đổi animation (tránh giật cục)")]

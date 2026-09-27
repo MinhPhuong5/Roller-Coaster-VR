@@ -10,8 +10,8 @@ using UnityEngine.XR;
 public class XRFallbackWalkController : MonoBehaviour
 {
     [Header("Tốc độ di chuyển")]
-    public float walkSpeed = 5.0f;
-    public float runSpeed = 10.0f;
+    public float walkSpeed = 3.5f;
+    public float runSpeed = 7.0f;
     public float gravity = -9.81f;
 
     [Header("Độ nhạy xoay chuột")]
