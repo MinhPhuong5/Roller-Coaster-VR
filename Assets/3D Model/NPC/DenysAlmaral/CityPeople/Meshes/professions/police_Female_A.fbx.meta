@@ -8,12 +8,12 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: peopleColors
-    second: {fileID: 2100000, guid: 1a77ecb7d10f8e344a05c9cf5a49b8b4, type: 2}
+    second: {fileID: 2100000, guid: c2de9ee12d731e14e93392e0a8046454, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: people_pal
-    second: {fileID: 2100000, guid: 1a77ecb7d10f8e344a05c9cf5a49b8b4, type: 2}
+    second: {fileID: 2100000, guid: c2de9ee12d731e14e93392e0a8046454, type: 2}
   materials:
     materialImportMode: 0
     materialName: 0
