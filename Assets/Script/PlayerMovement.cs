@@ -1,5 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Điều khiển người chơi di chuyển (W/A/S/D) và xoay theo hướng nhìn Camera.
+/// Tích hợp giới hạn di chuyển chặt chẽ trong các BoxCollider (WalkZone).
+/// </summary>
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
@@ -22,6 +27,11 @@ public class PlayerMovement : MonoBehaviour
     [Header("Physics")]
     public float gravity = -9.81f;
 
+    [Header("Giới hạn vùng đi dạo (WalkZone Colliders)")]
+    public bool restrictToWalkZones = true;
+    public BoxCollider[] walkZoneColliders;
+    public float boundaryMargin = 0.35f;
+
     [Header("References")]
     [Tooltip("Kéo Main Camera vào đây để nhân vật đi theo hướng nhìn của camera (nếu để trống script tự tìm)")]
     public Transform cameraTransform;
@@ -32,22 +42,60 @@ public class PlayerMovement : MonoBehaviour
     private float turnSmoothVelocity;
     private int speedHash;
 
-    void Start()
+    void Awake()
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+        FindAndCacheWalkZones();
+    }
 
+    void Start()
+    {
         if (cameraTransform == null && Camera.main != null)
         {
             cameraTransform = Camera.main.transform;
         }
 
         speedHash = Animator.StringToHash("Speed");
+        SnapInsideNearestZone();
     }
 
     void Update()
     {
         HandleMovement();
+    }
+
+    public void FindAndCacheWalkZones()
+    {
+        if (walkZoneColliders != null && walkZoneColliders.Length > 0) return;
+
+        List<BoxCollider> foundZones = new List<BoxCollider>();
+        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
+
+        foreach (var box in allBoxes)
+        {
+            if (box == null) continue;
+            string objName = box.gameObject.name.ToLower();
+            if (objName.Contains("walkzone") || objName.Contains("walk_zone") || objName.Contains("playzone"))
+            {
+                foundZones.Add(box);
+            }
+        }
+
+        walkZoneColliders = foundZones.ToArray();
+    }
+
+    private void SnapInsideNearestZone()
+    {
+        if (!restrictToWalkZones || walkZoneColliders == null || walkZoneColliders.Length == 0) return;
+
+        if (!IsPointInsideAnyZone(transform.position, 0.05f))
+        {
+            Vector3 clampedPos = GetClampedPositionInsideZones(transform.position);
+            controller.enabled = false;
+            transform.position = clampedPos;
+            controller.enabled = true;
+        }
     }
 
     private void HandleMovement()
@@ -92,20 +140,43 @@ public class PlayerMovement : MonoBehaviour
             moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
         }
 
-        // 4. Xử lý trọng lực (Chống lún sàn triệt để)
+        // 4. Xử lý trọng lực
         if (controller.isGrounded)
         {
-            // Khi đã chạm đất thì triệt tiêu lực rơi, giữ lực ép nhẹ -0.5f để chân dính sát sàn
             currentVelocityY = -0.5f;
         }
         else
         {
-            // Khi ở trên không thì mới áp dụng gia tốc rơi
             currentVelocityY += gravity * Time.deltaTime;
         }
 
-        // Kết hợp di chuyển phẳng và trọng lực vào 1 lệnh Move duy nhất
-        Vector3 finalVelocity = (moveDir.normalized * currentMoveSpeed) + new Vector3(0, currentVelocityY, 0);
+        Vector3 horizontalMove = moveDir.normalized * currentMoveSpeed * Time.deltaTime;
+
+        // GIỚI HẠN DI CHUYỂN TRONG BOX COLLIDER (CHẶN ĐỨNG NẾU ĐI RA NGOÀI)
+        if (restrictToWalkZones && walkZoneColliders != null && walkZoneColliders.Length > 0 && horizontalMove.sqrMagnitude > 0f)
+        {
+            Vector3 nextPos = transform.position + horizontalMove;
+            if (!IsPointInsideAnyZone(nextPos, boundaryMargin))
+            {
+                Vector3 nextPosX = transform.position + new Vector3(horizontalMove.x, 0f, 0f);
+                Vector3 nextPosZ = transform.position + new Vector3(0f, 0f, horizontalMove.z);
+
+                if (IsPointInsideAnyZone(nextPosX, boundaryMargin))
+                {
+                    horizontalMove = new Vector3(horizontalMove.x, 0f, 0f);
+                }
+                else if (IsPointInsideAnyZone(nextPosZ, boundaryMargin))
+                {
+                    horizontalMove = new Vector3(0f, 0f, horizontalMove.z);
+                }
+                else
+                {
+                    horizontalMove = Vector3.zero;
+                }
+            }
+        }
+
+        Vector3 finalVelocity = (horizontalMove / Time.deltaTime) + new Vector3(0, currentVelocityY, 0);
         controller.Move(finalVelocity * Time.deltaTime);
 
         // 5. Cập nhật tham số Speed vào Animator
@@ -113,5 +184,60 @@ public class PlayerMovement : MonoBehaviour
         {
             animator.SetFloat(speedHash, targetSpeedValue, animationDampTime, Time.deltaTime);
         }
+    }
+
+    public bool IsPointInsideAnyZone(Vector3 worldPoint, float margin = 0.2f)
+    {
+        if (walkZoneColliders == null || walkZoneColliders.Length == 0) return true;
+
+        for (int i = 0; i < walkZoneColliders.Length; i++)
+        {
+            BoxCollider box = walkZoneColliders[i];
+            if (box != null && box.enabled && box.gameObject.activeInHierarchy)
+            {
+                if (IsPointInsideBox(worldPoint, box, margin))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    public static bool IsPointInsideBox(Vector3 worldPoint, BoxCollider box, float margin = 0.2f)
+    {
+        if (box == null) return false;
+
+        Vector3 local = box.transform.InverseTransformPoint(worldPoint);
+        Vector3 half = (box.size * 0.5f) - new Vector3(margin, 0, margin);
+        if (half.x < 0.1f) half.x = box.size.x * 0.5f;
+        if (half.z < 0.1f) half.z = box.size.z * 0.5f;
+
+        bool inX = Mathf.Abs(local.x - box.center.x) <= half.x;
+        bool inZ = Mathf.Abs(local.z - box.center.z) <= half.z;
+        bool inY = Mathf.Abs(local.y - box.center.y) <= (box.size.y * 0.5f + 3.0f);
+
+        return inX && inZ && inY;
+    }
+
+    public Vector3 GetClampedPositionInsideZones(Vector3 worldPoint)
+    {
+        if (walkZoneColliders == null || walkZoneColliders.Length == 0) return worldPoint;
+
+        Vector3 bestPoint = worldPoint;
+        float minDistance = float.MaxValue;
+
+        foreach (var box in walkZoneColliders)
+        {
+            if (box == null) continue;
+            Vector3 closest = box.ClosestPoint(worldPoint);
+            float d = Vector3.Distance(worldPoint, closest);
+            if (d < minDistance)
+            {
+                minDistance = d;
+                bestPoint = closest;
+            }
+        }
+
+        bestPoint.y = worldPoint.y;
+        return bestPoint;
     }
 }

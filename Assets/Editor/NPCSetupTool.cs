@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -145,10 +146,28 @@ public static class NPCSetupTool
         return null;
     }
 
+    private static BoxCollider[] FindAllWalkZones()
+    {
+        List<BoxCollider> list = new List<BoxCollider>();
+        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
+        foreach (var b in allBoxes)
+        {
+            if (b == null) continue;
+            string n = b.gameObject.name.ToLower();
+            if (n.Contains("walkzone") || n.Contains("walk_zone") || n.Contains("playzone"))
+            {
+                list.Add(b);
+            }
+        }
+        return list.ToArray();
+    }
+
     private static void ApplyToSceneNPCs(RuntimeAnimatorController controller)
     {
         GameObject npcRoot = GameObject.Find("NPC");
         if (npcRoot == null) return;
+
+        BoxCollider[] walkZones = FindAllWalkZones();
 
         int count = 0;
         foreach (Transform child in npcRoot.transform)
@@ -166,10 +185,15 @@ public static class NPCSetupTool
                 wanderer = child.gameObject.AddComponent<ParkNPCWanderer>();
             }
 
+            wanderer.boundaryMode = ParkNPCWanderer.BoundaryMode.BoxZoneCollider;
+            wanderer.walkZoneColliders = walkZones;
+            wanderer.boundaryMargin = 0.35f;
+
+            EditorUtility.SetDirty(wanderer);
             count++;
         }
 
-        Debug.Log($"[NPCSetupTool] Đã tự động gắn Animator và ParkNPCWanderer cho {count} nhân vật trong 'NPC'!");
+        Debug.Log($"[NPCSetupTool] Đã tự động gắn Animator và ParkNPCWanderer (kèm {walkZones.Length} WalkZone) cho {count} nhân vật trong 'NPC'!");
     }
 
     [MenuItem("Tools/NPC System/1-Click Restore & Auto-Spawn All NPCs")]
@@ -186,6 +210,8 @@ public static class NPCSetupTool
             npcRoot = new GameObject("NPC");
             Undo.RegisterCreatedObjectUndo(npcRoot, "Create NPC Root");
         }
+
+        BoxCollider[] walkZones = FindAllWalkZones();
 
         // 3. Danh sách các Prefab nhân vật đầy đủ mọi thành phần
         string[] prefabPaths = new string[]
@@ -255,10 +281,14 @@ public static class NPCSetupTool
                 wanderer = npcInstance.AddComponent<ParkNPCWanderer>();
             }
 
+            wanderer.boundaryMode = ParkNPCWanderer.BoundaryMode.BoxZoneCollider;
+            wanderer.walkZoneColliders = walkZones;
+            wanderer.boundaryMargin = 0.35f;
+
             spawnedCount++;
         }
 
-        // Đảm bảo XR Origin có tốc độ đi bộ chuẩn
+        // Đảm bảo XR Origin có tốc độ đi bộ chuẩn và gán WalkZones
         GameObject xrOrigin = GameObject.Find("XR Origin (XR Rig)");
         if (xrOrigin != null)
         {
@@ -268,6 +298,8 @@ public static class NPCSetupTool
                 walk.walkSpeed = (npcScale > 1f) ? 15f : 3.5f;
                 walk.runSpeed = (npcScale > 1f) ? 30f : 7.0f;
                 walk.gravity = -9.81f;
+                walk.walkZoneColliders = walkZones;
+                walk.restrictToWalkZones = true;
                 EditorUtility.SetDirty(walk);
             }
         }

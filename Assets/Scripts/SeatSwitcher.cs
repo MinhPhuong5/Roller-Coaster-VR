@@ -25,7 +25,10 @@ public class SeatSwitcher : MonoBehaviour
     public RideController rideController;
 
     [Header("Rào Chắn Ga")]
+    [Tooltip("Thanh chắn ga chính (hoặc kéo nhiều thanh chắn vào mảng stationGates)")]
     public StationGateController stationGate;
+    [Tooltip("Danh sách các thanh chắn nếu ga có nhiều làn (nếu để trống script tự tìm toàn bộ thanh chắn)")]
+    public StationGateController[] stationGates;
 
     [Header("UI Sảnh")]
     [Tooltip("Kéo RideUIPanel vào đây")]
@@ -84,6 +87,12 @@ public class SeatSwitcher : MonoBehaviour
         if (rideController == null)
         {
             rideController = Object.FindAnyObjectByType<RideController>();
+        }
+
+        // Tự động tìm và gom toàn bộ thanh chắn trong Scene (kể cả các bản sao mới tạo)
+        if (stationGates == null || stationGates.Length == 0)
+        {
+            stationGates = Object.FindObjectsByType<StationGateController>(FindObjectsSortMode.None);
         }
     }
 
@@ -299,10 +308,20 @@ public class SeatSwitcher : MonoBehaviour
 
     public void TriggerEarlyGateClose()
     {
-        if (!isGateAlreadyClosed && stationGate != null)
+        if (!isGateAlreadyClosed)
         {
             isGateAlreadyClosed = true;
-            stationGate.CloseGate();
+            if (stationGates != null && stationGates.Length > 0)
+            {
+                foreach (var gate in stationGates)
+                {
+                    if (gate != null) gate.CloseGate();
+                }
+            }
+            else if (stationGate != null)
+            {
+                stationGate.CloseGate();
+            }
         }
     }
 
@@ -318,7 +337,15 @@ public class SeatSwitcher : MonoBehaviour
     {
         isGateAlreadyClosed = false;
 
-        if (stationGate != null)
+        // Mở toàn bộ các thanh chắn trong ga
+        if (stationGates != null && stationGates.Length > 0)
+        {
+            foreach (var gate in stationGates)
+            {
+                if (gate != null) gate.OpenGate();
+            }
+        }
+        else if (stationGate != null)
         {
             stationGate.OpenGate();
         }
@@ -381,7 +408,14 @@ public class SeatSwitcher : MonoBehaviour
         // Chờ đủ thời gian để tàu phanh từ từ về bến dừng hẳn
         yield return new WaitForSeconds(3.5f);
 
-        if (stationGate != null && stationGate.gateAudioSource != null)
+        if (stationGates != null && stationGates.Length > 0)
+        {
+            foreach (var gate in stationGates)
+            {
+                if (gate != null && gate.gateAudioSource != null) gate.gateAudioSource.Stop();
+            }
+        }
+        else if (stationGate != null && stationGate.gateAudioSource != null)
         {
             stationGate.gateAudioSource.Stop();
         }

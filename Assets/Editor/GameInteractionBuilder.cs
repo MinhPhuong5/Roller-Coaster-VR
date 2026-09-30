@@ -97,7 +97,7 @@ public static class GameInteractionBuilder
         canvas.sortingOrder = 30;
 
         RectTransform canvasRt = canvasObj.GetComponent<RectTransform>();
-        canvasRt.sizeDelta = new Vector2(1920f, 1080f);
+        canvasRt.sizeDelta = new Vector2(800f, 500f);
         canvasRt.localScale = new Vector3(0.0015f, 0.0015f, 0.0015f); // Tỉ lệ kích thước người thật
 
         canvasObj.AddComponent<GraphicRaycaster>();
@@ -107,29 +107,29 @@ public static class GameInteractionBuilder
         Sprite whiteSprite = AssetDatabase.LoadAssetAtPath<Sprite>(whitePixelPath);
 
         // =========================================================================
-        // BẢNG ĐIỀU KHIỂN KIOSK 3D (LUÔN BẬT SẴN Ở LỐI VÀO)
+        // BẢNG ĐIỀU KHIỂN KIOSK 3D (TRÀN VIỀN, VỪA KHÍT CANVAS, KHÔNG CÓ VIỀN THỪA)
         // =========================================================================
         GameObject modalObj = CreateUIElement("Panel_ConfirmationModal", canvasObj.transform);
         StretchFull(modalObj.GetComponent<RectTransform>());
 
         GameObject modalCard = CreateUIElement("ModalCard", modalObj.transform);
         RectTransform mcRt = modalCard.GetComponent<RectTransform>();
-        SetAnchors(mcRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800f, 500f));
+        StretchFull(mcRt); // Tràn viền 100% không để lộ viền thừa xung quanh
         Image mcImg = modalCard.AddComponent<Image>();
         if (whiteSprite != null) mcImg.sprite = whiteSprite;
-        mcImg.color = new Color(0.10f, 0.14f, 0.24f, 0.98f);
+        mcImg.color = new Color(0.08f, 0.12f, 0.22f, 0.96f);
 
         Outline mcOutline = modalCard.AddComponent<Outline>();
-        mcOutline.effectColor = new Color(0.25f, 0.75f, 1f, 0.90f);
-        mcOutline.effectDistance = new Vector2(6, -6);
+        mcOutline.effectColor = new Color(0.25f, 0.75f, 1f, 0.60f);
+        mcOutline.effectDistance = new Vector2(2, -2);
 
         // Header Banner
         GameObject bannerObj = CreateUIElement("HeaderBanner", modalCard.transform);
         RectTransform bRt = bannerObj.GetComponent<RectTransform>();
-        SetAnchors(bRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(720f, 70f));
+        SetAnchors(bRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(760f, 65f));
         Image bImg = bannerObj.AddComponent<Image>();
         if (whiteSprite != null) bImg.sprite = whiteSprite;
-        bImg.color = new Color(1f, 0.60f, 0.15f, 1f);
+        bImg.color = new Color(1f, 0.58f, 0.12f, 1f);
 
         // Title
         GameObject titleObj = CreateUIElement("Title", bannerObj.transform);
@@ -144,7 +144,7 @@ public static class GameInteractionBuilder
         // Nội dung mô tả
         GameObject msgObj = CreateUIElement("MessageContent", modalCard.transform);
         RectTransform msgRt = msgObj.GetComponent<RectTransform>();
-        SetAnchors(msgRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 15f), new Vector2(700f, 180f));
+        SetAnchors(msgRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 15f), new Vector2(720f, 170f));
         TextMeshProUGUI msgTmp = AddCrispTMP(msgObj);
         msgTmp.text = "<size=28><color=#FFDD55><b>Bạn có muốn bắt đầu chuyến phiêu lưu mạo hiểm?</b></color></size>\n\n" +
                       "Trải nghiệm những khúc cua nghẹt thở và tốc độ xé gió trên đường ray huyền thoại!\n" +
@@ -155,12 +155,12 @@ public static class GameInteractionBuilder
 
         // Nút duy nhất: "VÀO CHƠI TÀU LƯỢN" (To rõ, dễ bấm)
         GameObject btnStartObj = CreateButton("Btn_ConfirmStart", modalCard.transform,
-            new Vector2(0.5f, 0f), new Vector2(0f, 85f), new Vector2(360f, 75f),
+            new Vector2(0.5f, 0f), new Vector2(0f, 65f), new Vector2(380f, 75f),
             new Color(0.12f, 0.75f, 0.38f, 1f), whiteSprite);
         SetButtonText(btnStartObj, "VÀO CHƠI NGAY  ➔", 26, Color.white);
         Outline bsOutline = btnStartObj.AddComponent<Outline>();
         bsOutline.effectColor = new Color(0.08f, 0.45f, 0.22f, 1f);
-        bsOutline.effectDistance = new Vector2(3, -3);
+        bsOutline.effectDistance = new Vector2(2, -2);
 
         modalObj.SetActive(true); // Luôn mở sẵn trong không gian
 

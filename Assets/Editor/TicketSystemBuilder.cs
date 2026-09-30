@@ -53,11 +53,8 @@ public static class TicketSystemBuilder
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.sortingOrder = 20;
 
-        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        RectTransform canvasRt = canvasObj.GetComponent<RectTransform>();
+        canvasRt.sizeDelta = new Vector2(1050f, 720f);
 
         canvasObj.AddComponent<GraphicRaycaster>();
         canvasObj.AddComponent<UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster>();
@@ -85,25 +82,22 @@ public static class TicketSystemBuilder
         Sprite whiteSprite = AssetDatabase.LoadAssetAtPath<Sprite>(whitePixelPath);
 
         // ==========================================
-        // A. GIAO DIỆN CHỌN TRÒ CHƠI (6 Ô PHONG CÁCH SÓC NHÍ - LUÔN BẬT)
+        // A. GIAO DIỆN CHỌN TRÒ CHƠI (TRÀN VIỀN - KHÔNG VIỀN ĐEN THỪA)
         // ==========================================
         GameObject shopObj = CreateUIElement("Panel_TicketShop", canvasObj.transform);
         StretchFull(shopObj.GetComponent<RectTransform>());
-        Image shopBackdrop = shopObj.AddComponent<Image>();
-        if (whiteSprite != null) shopBackdrop.sprite = whiteSprite;
-        shopBackdrop.color = new Color(0f, 0f, 0f, 0.7f);
 
-        // Khung xanh bo tròn phong cách Sóc Nhí
+        // Khung xanh bo tròn phong cách Sóc Nhí tràn viền
         GameObject shopFrame = CreateUIElement("ShopFrame_SocNhiStyle", shopObj.transform);
         RectTransform sfRt = shopFrame.GetComponent<RectTransform>();
-        SetAnchors(sfRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1050f, 720f));
+        StretchFull(sfRt);
         Image sfImg = shopFrame.AddComponent<Image>();
         if (whiteSprite != null) sfImg.sprite = whiteSprite;
         sfImg.color = new Color(0.25f, 0.65f, 0.95f, 1f);
 
         Outline sfOutline = shopFrame.AddComponent<Outline>();
         sfOutline.effectColor = new Color(0.15f, 0.45f, 0.75f, 1f);
-        sfOutline.effectDistance = new Vector2(5, -5);
+        sfOutline.effectDistance = new Vector2(3, -3);
 
         // Nền trắng bên trong khung
         GameObject innerBox = CreateUIElement("InnerWhiteBox", shopFrame.transform);

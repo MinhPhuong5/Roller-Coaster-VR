@@ -18,12 +18,40 @@ public class StationGateController : MonoBehaviour
 
     private Coroutine currentRotateRoutine;
 
+    private void Awake()
+    {
+        // Tự động đảm bảo barPivot trỏ đúng vào con của chính GameObject này (tránh lỗi khi Duplicate vẫn trỏ về con của bản gốc)
+        if (barPivot == null || !barPivot.IsChildOf(transform))
+        {
+            Transform found = transform.Find("Bar_Pivot");
+            if (found == null)
+            {
+                foreach (Transform child in transform)
+                {
+                    if (child.name.ToLower().Contains("pivot") || child.name.ToLower().Contains("bar"))
+                    {
+                        found = child;
+                        break;
+                    }
+                }
+            }
+            if (found != null) barPivot = found;
+        }
+
+        if (gateAudioSource == null)
+        {
+            gateAudioSource = GetComponent<AudioSource>();
+        }
+    }
+
     public void OpenGate()
     {
         if (gateAudioSource != null && gateOpenClip != null)
         {
             gateAudioSource.PlayOneShot(gateOpenClip);
         }
+
+        if (barPivot == null) return;
 
         if (currentRotateRoutine != null) StopCoroutine(currentRotateRoutine);
         currentRotateRoutine = StartCoroutine(RotateGateRoutine(openAngle));
@@ -36,12 +64,16 @@ public class StationGateController : MonoBehaviour
             gateAudioSource.PlayOneShot(gateCloseClip);
         }
 
+        if (barPivot == null) return;
+
         if (currentRotateRoutine != null) StopCoroutine(currentRotateRoutine);
         currentRotateRoutine = StartCoroutine(RotateGateRoutine(closedAngle));
     }
 
     private IEnumerator RotateGateRoutine(float targetZAngle)
     {
+        if (barPivot == null) yield break;
+
         Quaternion targetRotation = Quaternion.Euler(0, 0, targetZAngle);
         while (Quaternion.Angle(barPivot.localRotation, targetRotation) > 0.5f)
         {

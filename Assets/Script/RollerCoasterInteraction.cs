@@ -38,6 +38,44 @@ public class RollerCoasterInteraction : MonoBehaviour
     private Transform playerTransform;
     private bool isPlayerNearby = false;
 
+    private void Awake()
+    {
+        // Tự động căn chỉnh Canvas & ModalCard tràn viền, triệt tiêu hoàn toàn viền thừa / viền đen lồi ra ngoài
+        if (confirmationModalPanel != null)
+        {
+            Canvas canvas = confirmationModalPanel.GetComponentInParent<Canvas>();
+            if (canvas != null && canvas.renderMode == RenderMode.WorldSpace)
+            {
+                RectTransform canvasRt = canvas.GetComponent<RectTransform>();
+                if (canvasRt != null)
+                {
+                    canvasRt.sizeDelta = new Vector2(800f, 500f);
+                }
+            }
+
+            // Tắt background thừa nếu có trên Panel cha
+            Image panelImg = confirmationModalPanel.GetComponent<Image>();
+            if (panelImg != null && confirmationModalPanel.transform.childCount > 0)
+            {
+                panelImg.enabled = false;
+            }
+
+            // Ép ModalCard con tràn viền 100%
+            Transform modalCard = confirmationModalPanel.transform.Find("ModalCard");
+            if (modalCard != null)
+            {
+                RectTransform mcRt = modalCard.GetComponent<RectTransform>();
+                if (mcRt != null)
+                {
+                    mcRt.anchorMin = Vector2.zero;
+                    mcRt.anchorMax = Vector2.one;
+                    mcRt.offsetMin = Vector2.zero;
+                    mcRt.offsetMax = Vector2.zero;
+                }
+            }
+        }
+    }
+
     private void Start()
     {
         // Mặc định ẩn bảng xác nhận khi mới vào Scene

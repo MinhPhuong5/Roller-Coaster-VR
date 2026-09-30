@@ -252363,6 +252363,8 @@ MonoBehaviour:
   rideController: {fileID: 6339315314316567795}
   stationGate: {fileID: 872017137939271875}
   uiPanel: {fileID: 6306231117654122286}
+  selectSeatGroup: {fileID: 0}
+  gameOverPanel: {fileID: 0}
   startButton: {fileID: 6377576311250152055}
   useCountdownText: 0
   useCountdownAudio: 0
@@ -252370,6 +252372,7 @@ MonoBehaviour:
   countdownSeconds: 3
   countdownAudio: {fileID: 1024302573799337903}
   gateOpenDelay: 4
+  stationFloorPoint: {fileID: 0}
   parkReturnPoint: {fileID: 0}
 --- !u!82 &1024302573799337903
 AudioSource:

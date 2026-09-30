@@ -8,7 +8,7 @@ public class TicketShopUIManager : MonoBehaviour
     public static TicketShopUIManager Instance { get; private set; }
 
     [Header("Main Ticket Shop UI (Bảng đặt cố định trước quầy)")]
-    [Tooltip("Panel chính chứa 6 trò chơi - Luôn luôn bật")]
+    [Tooltip("Panel chính chứa 6 trò chơi")]
     public GameObject shopPanel;
     public Button shopCloseButton;
     public Button rollerCoasterButton; // Nút Tàu lượn siêu tốc
@@ -29,6 +29,8 @@ public class TicketShopUIManager : MonoBehaviour
     public TextMeshProUGUI successMessageText;
     public Button successOkButton;
     public Button successCloseButton;
+    [Tooltip("Thời gian hiển thị thông báo mua vé thành công trước khi tự động đóng toàn bộ UI (giây)")]
+    public float successAutoCloseDelay = 2.0f;
 
     [Header("Locked Game Notice Popup")]
     public GameObject lockedNoticePanel;
@@ -41,6 +43,7 @@ public class TicketShopUIManager : MonoBehaviour
     public int PurchasedTicketCount => purchasedTickets;
 
     private Coroutine lockedNoticeCoroutine;
+    private Coroutine autoCloseSuccessCoroutine;
 
     public bool ConsumeTicket()
     {
@@ -91,9 +94,6 @@ public class TicketShopUIManager : MonoBehaviour
         if (successOkButton != null) successOkButton.onClick.AddListener(CloseSuccessPopup);
         if (successCloseButton != null) successCloseButton.onClick.AddListener(CloseSuccessPopup);
 
-        // 3. BẢNG VÉ LUÔN BẬT SẴN TRƯỚC QUẦY
-        if (shopPanel != null) shopPanel.SetActive(true);
-
         // Ẩn các popup phụ
         if (quantityPanel != null) quantityPanel.SetActive(false);
         if (successPanel != null) successPanel.SetActive(false);
@@ -108,14 +108,34 @@ public class TicketShopUIManager : MonoBehaviour
 
     public void OpenShop()
     {
+        gameObject.SetActive(true);
+
         if (shopPanel != null) shopPanel.SetActive(true);
+        if (quantityPanel != null) quantityPanel.SetActive(false);
+        if (successPanel != null) successPanel.SetActive(false);
+        if (lockedNoticePanel != null) lockedNoticePanel.SetActive(false);
+
+        if (autoCloseSuccessCoroutine != null)
+        {
+            StopCoroutine(autoCloseSuccessCoroutine);
+            autoCloseSuccessCoroutine = null;
+        }
     }
 
     public void CloseShopPanel()
     {
         if (shopPanel != null) shopPanel.SetActive(false);
-    }
+        if (quantityPanel != null) quantityPanel.SetActive(false);
+        if (successPanel != null) successPanel.SetActive(false);
+        if (lockedNoticePanel != null) lockedNoticePanel.SetActive(false);
 
+        // Ẩn luôn Canvas_TicketSystem nếu component gắn trên Canvas
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.gameObject.SetActive(false);
+        }
+    }
 
     public void OpenQuantityPopup()
     {
@@ -167,6 +187,12 @@ public class TicketShopUIManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Khi xác nhận mua vé:
+    /// - Cộng số vé đã mua
+    /// - Hiện Popup thông báo thành công
+    /// - Tự động ẩn toàn bộ bảng vé sau khi hết thời gian chờ hoặc khi bấm Đóng
+    /// </summary>
     public void ConfirmPurchase()
     {
         purchasedTickets += currentTicketCount;
@@ -179,12 +205,35 @@ public class TicketShopUIManager : MonoBehaviour
                 successMessageText.text = $"Bạn đã mua thành công {currentTicketCount} vé Tàu lượn siêu tốc!";
             }
             successPanel.SetActive(true);
+
+            // Tự động đóng popup thành công và ẩn bảng vé sau 2 giây
+            if (autoCloseSuccessCoroutine != null) StopCoroutine(autoCloseSuccessCoroutine);
+            autoCloseSuccessCoroutine = StartCoroutine(AutoCloseSuccessAndShopRoutine());
         }
+        else
+        {
+            CloseShopPanel();
+        }
+    }
+
+    private IEnumerator AutoCloseSuccessAndShopRoutine()
+    {
+        yield return new WaitForSeconds(successAutoCloseDelay);
+        CloseSuccessPopup();
     }
 
     public void CloseSuccessPopup()
     {
+        if (autoCloseSuccessCoroutine != null)
+        {
+            StopCoroutine(autoCloseSuccessCoroutine);
+            autoCloseSuccessCoroutine = null;
+        }
+
         if (successPanel != null) successPanel.SetActive(false);
+
+        // Sau khi mua vé xong -> Ẩn toàn bộ bảng vé
+        CloseShopPanel();
     }
 
     private void OnLockedGameClicked()
