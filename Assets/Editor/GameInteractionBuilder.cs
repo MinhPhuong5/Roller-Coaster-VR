@@ -13,6 +13,30 @@ public static class GameInteractionBuilder
         BuildRollerCoasterInteraction(silent: false);
     }
 
+    [MenuItem("Tools/Game Interaction/1-Click Remove Kiosk 3D Interaction")]
+    public static void RemoveRollerCoasterInteraction()
+    {
+        GameObject canvasObj = GameObject.Find("Canvas_GameInteraction");
+        if (canvasObj != null)
+        {
+            Undo.DestroyObjectImmediate(canvasObj);
+        }
+
+        GameObject coasterObj = FindRollerCoasterObject();
+        if (coasterObj != null)
+        {
+            Transform zoneTransform = coasterObj.transform.Find("InteractionZone");
+            if (zoneTransform != null)
+            {
+                Undo.DestroyObjectImmediate(zoneTransform.gameObject);
+            }
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log("<color=#FF6600><b>[GameInteractionBuilder] Đã xóa Kiosk 3D và InteractionZone khỏi Scene!</b></color>");
+        EditorUtility.DisplayDialog("Xóa Thành Công", "Đã gỡ bỏ Kiosk 3D và InteractionZone khỏi Scene.", "OK");
+    }
+
     public static void BuildRollerCoasterInteraction(bool silent = false)
     {
         string scenePath = "Assets/Scenes/ParkScene.unity";
@@ -59,14 +83,12 @@ public static class GameInteractionBuilder
             zoneObj = zoneTransform.gameObject;
         }
 
-        BoxCollider boxCol = zoneObj.GetComponent<BoxCollider>();
-        if (boxCol == null)
+        // Không thêm BoxCollider lên InteractionZone để tránh bị scale bởi cha (MoHinhTroChoi scale 170) đẩy người chơi lên trời
+        BoxCollider oldBox = zoneObj.GetComponent<BoxCollider>();
+        if (oldBox != null)
         {
-            boxCol = zoneObj.AddComponent<BoxCollider>();
+            Undo.DestroyObjectImmediate(oldBox);
         }
-        boxCol.isTrigger = true;
-        boxCol.size = new Vector3(6f, 4f, 6f);
-        boxCol.center = new Vector3(0f, 1f, 0f);
 
         RollerCoasterInteraction interactionScript = zoneObj.GetComponent<RollerCoasterInteraction>();
         if (interactionScript == null)
@@ -99,6 +121,10 @@ public static class GameInteractionBuilder
         RectTransform canvasRt = canvasObj.GetComponent<RectTransform>();
         canvasRt.sizeDelta = new Vector2(800f, 500f);
         canvasRt.localScale = new Vector3(0.0015f, 0.0015f, 0.0015f); // Tỉ lệ kích thước người thật
+
+        // Đặt vị trí Canvas ngang tầm mắt trước InteractionZone
+        canvasObj.transform.position = zoneObj.transform.position + Vector3.up * 1.5f + zoneObj.transform.forward * 0.5f;
+        canvasObj.transform.rotation = zoneObj.transform.rotation;
 
         canvasObj.AddComponent<GraphicRaycaster>();
         Undo.RegisterCreatedObjectUndo(canvasObj, "Create Canvas_GameInteraction");
@@ -179,6 +205,8 @@ public static class GameInteractionBuilder
 
         SeatSwitcher sw = Object.FindFirstObjectByType<SeatSwitcher>();
         if (sw != null) interactionScript.seatSwitcher = sw;
+
+        NPCSetupTool.SetupNPCSystem();
 
         EditorUtility.SetDirty(zoneObj);
         EditorUtility.SetDirty(canvasObj);

@@ -94,7 +94,7 @@ namespace CityPeople
             if (myClips.Length > 0)
             {
                 var cl = myClips[Random.Range(0, myClips.Length)];
-                animator.CrossFadeInFixedTime(cl.name, 1.0f, -1, Random.value * cl.length);
+                animator.CrossFadeInFixedTime(cl.name, 1.0f, 0, Random.value * cl.length);
             }
             else Debug.LogWarning("Missing animations clips.");
         }

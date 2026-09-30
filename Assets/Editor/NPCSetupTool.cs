@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
+using UnityEditor.SceneManagement;
 
 public static class NPCSetupTool
 {
@@ -12,6 +13,8 @@ public static class NPCSetupTool
     [MenuItem("Tools/NPC System/1-Click Setup NPC Animator & Avatar Mask")]
     public static void SetupNPCSystem()
     {
+        EnsurePlayerBodyLayerRegistered();
+
         // 1. Tạo AvatarMask chỉ lấy phần thân trên
         AvatarMask upperBodyMask = AssetDatabase.LoadAssetAtPath<AvatarMask>(MaskPath);
         if (upperBodyMask == null)
@@ -42,7 +45,11 @@ public static class NPCSetupTool
         AnimationClip walkClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/locom_m_basicWalk_30f.fbx");
         AnimationClip idleClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/idle_m_1_200f.fbx");
         AnimationClip sitClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Sitting Idle.fbx");
-        AnimationClip fallClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Falling.fbx");
+        
+        // Hoạt ảnh mạo hiểm / giơ vẫy tay sống động
+        AnimationClip thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/dance_hype_100f.fbx");
+        if (thrillClip == null) thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Falling.fbx");
+        if (thrillClip == null) thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle.fbx");
 
         // 3. Tạo hoặc nạp AnimatorController
         AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(AnimatorPath);
@@ -91,7 +98,7 @@ public static class NPCSetupTool
         sitToIdle.duration = 0.25f;
 
         // ==========================================
-        // UPPER BODY LAYER: Động tác chới với / Giơ tay khi tàu lao dốc
+        // UPPER BODY LAYER: Động tác chới với / Giơ tay linh hoạt khi tàu lao dốc
         // ==========================================
         AnimatorControllerLayer upperLayer = new AnimatorControllerLayer
         {
@@ -105,19 +112,20 @@ public static class NPCSetupTool
         upperLayer.stateMachine.hideFlags = HideFlags.HideInHierarchy;
         AssetDatabase.AddObjectToAsset(upperLayer.stateMachine, AnimatorPath);
 
-        // State trống (mặc định để tay chân ngồi yên theo Base Layer)
-        AnimatorState emptyUpperState = upperLayer.stateMachine.AddState("Sitting_Arm_Rest", new Vector3(250, 100, 0));
+        // State mặc định: Empty (motion = null). Giúp Base Layer hoàn toàn tự do (tay vung tự nhiên khi đi bộ/đứng ở công viên)
+        AnimatorState emptyState = upperLayer.stateMachine.AddState("Empty", new Vector3(250, 100, 0));
+        emptyState.motion = null;
 
-        // State phản ứng lao dốc (Falling chới với thân trên)
-        AnimatorState fallReactionState = upperLayer.stateMachine.AddState("Thrill_Reaction", new Vector3(250, 220, 0));
-        fallReactionState.motion = fallClip;
+        // State phản ứng lao dốc / tốc độ cao (Vẫy tay & Giơ tay sống động)
+        AnimatorState thrillReactionState = upperLayer.stateMachine.AddState("Thrill_Reaction", new Vector3(250, 220, 0));
+        thrillReactionState.motion = thrillClip;
 
-        var toReact = emptyUpperState.AddTransition(fallReactionState);
+        var toReact = emptyState.AddTransition(thrillReactionState);
         toReact.AddCondition(AnimatorConditionMode.If, 0, "IsThrilled");
         toReact.hasExitTime = false;
         toReact.duration = 0.2f;
 
-        var toEmpty = fallReactionState.AddTransition(emptyUpperState);
+        var toEmpty = thrillReactionState.AddTransition(emptyState);
         toEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsThrilled");
         toEmpty.hasExitTime = false;
         toEmpty.duration = 0.3f;
@@ -131,6 +139,207 @@ public static class NPCSetupTool
 
         // 4. Tự động gán vào các NPC đang có trong Scene
         ApplyToSceneNPCs(controller);
+
+        // 5. Thiết lập hệ thống 4 hành khách ngẫu nhiên trên CoasterRig
+        SetupCoasterPassengers();
+
+        // 6. Thiết lập Player NPC Body Controller
+        SetupPlayerNPCBody();
+
+        // 7. Thiết lập sàn nhà ga vững chắc chống rơi sàn
+        EnsureStationSolidColliders();
+    }
+
+    public static void EnsurePlayerBodyLayerRegistered()
+    {
+        SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+        SerializedProperty layers = tagManager.FindProperty("layers");
+        bool exists = false;
+        for (int i = 6; i < 32; i++)
+        {
+            SerializedProperty sp = layers.GetArrayElementAtIndex(i);
+            if (sp.stringValue == "PlayerBody")
+            {
+                exists = true;
+                break;
+            }
+        }
+
+        if (!exists)
+        {
+            for (int i = 6; i < 32; i++)
+            {
+                SerializedProperty sp = layers.GetArrayElementAtIndex(i);
+                if (string.IsNullOrEmpty(sp.stringValue))
+                {
+                    sp.stringValue = "PlayerBody";
+                    tagManager.ApplyModifiedProperties();
+                    Debug.Log($"[NPCSetupTool] Đã tự động đăng ký Layer '{sp.stringValue}' tại index {i}");
+                    break;
+                }
+            }
+        }
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Setup Player Representative NPC Body")]
+    public static void SetupPlayerNPCBody()
+    {
+        GameObject xrOrigin = GameObject.Find("XR Origin (XR Rig)");
+        if (xrOrigin == null) xrOrigin = GameObject.FindGameObjectWithTag("Player");
+        if (xrOrigin == null) return;
+
+        PlayerNPCBodyController bodyCtrl = xrOrigin.GetComponent<PlayerNPCBodyController>();
+        if (bodyCtrl == null)
+        {
+            bodyCtrl = xrOrigin.AddComponent<PlayerNPCBodyController>();
+            Undo.RegisterCreatedObjectUndo(bodyCtrl, "Add PlayerNPCBodyController");
+        }
+
+        bodyCtrl.ResolvePlayerReferences();
+        bodyCtrl.SetupCameraCulling();
+        bodyCtrl.LoadDefaultAssetsIfEmpty();
+        bodyCtrl.standingScale = Vector3.one;
+        bodyCtrl.seatedScale = new Vector3(1.22f, 1.22f, 1.22f);
+
+        EditorUtility.SetDirty(bodyCtrl);
+        Debug.Log("<color=#00FFCC><b>[NPCSetupTool] Đã thiết lập xong PlayerNPCBodyController cho người chơi!</b></color>");
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Ensure Station Solid Floor Colliders")]
+    public static void EnsureStationSolidColliders()
+    {
+        GameObject wtsMock = GameObject.Find("WTS_Mock");
+        if (wtsMock == null) return;
+
+        Transform floorRoot = wtsMock.transform.Find("Station_SolidFloors");
+        if (floorRoot == null)
+        {
+            GameObject go = new GameObject("Station_SolidFloors");
+            go.transform.SetParent(wtsMock.transform, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+            floorRoot = go.transform;
+            Undo.RegisterCreatedObjectUndo(go, "Create Station_SolidFloors");
+        }
+
+        EnsureBoxColliderChild(floorRoot, "UpperPlatform_SolidFloor", new Vector3(0.06f, 0.04f, 0.12f), new Vector3(6.5f, 0.15f, 6.5f));
+        EnsureBoxColliderChild(floorRoot, "LowerPlatform_SolidFloor", new Vector3(0.06f, 0.01f, 0.12f), new Vector3(6.5f, 0.15f, 6.5f));
+        EnsureBoxColliderChild(floorRoot, "Platform_ConnectingRamp", new Vector3(0.06f, 0.025f, 0.12f), new Vector3(6.5f, 0.15f, 2.0f));
+
+        // Căn chỉnh điểm đón khách VR_FloorPoint nằm sát trên mặt sàn nhà ga, không để lơ lửng trên không trung
+        GameObject vrFloor = GameObject.Find("VR_FloorPoint");
+        if (vrFloor != null)
+        {
+            if (vrFloor.transform.parent != null && vrFloor.transform.parent.name.Contains("WTS_Mock"))
+            {
+                vrFloor.transform.localPosition = new Vector3(0.06f, 0.042f, 0.12f);
+                EditorUtility.SetDirty(vrFloor);
+            }
+        }
+
+        EditorUtility.SetDirty(wtsMock);
+        Debug.Log("<color=#00FF99><b>[NPCSetupTool] Đã củng cố sàn nhà ga bằng BoxCollider chuẩn chống rơi sàn và chỉnh VR_FloorPoint xuống mặt sàn!</b></color>");
+    }
+
+    private static void EnsureBoxColliderChild(Transform parent, string name, Vector3 localCenter, Vector3 size)
+    {
+        Transform child = parent.Find(name);
+        GameObject go;
+        if (child == null)
+        {
+            go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+        }
+        else
+        {
+            go = child.gameObject;
+        }
+
+        BoxCollider box = go.GetComponent<BoxCollider>();
+        if (box == null) box = go.AddComponent<BoxCollider>();
+        box.center = localCenter;
+        box.size = size;
+        box.isTrigger = false; // Solid physical floor
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Setup Coaster 4 Random Passengers")]
+    public static void SetupCoasterPassengers()
+    {
+        string scenePath = "Assets/Scenes/ParkScene.unity";
+        var activeScene = EditorSceneManager.GetActiveScene();
+        if (activeScene.path != scenePath)
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                EditorSceneManager.OpenScene(scenePath);
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        GameObject coasterRig = GameObject.Find("CoasterRig");
+        if (coasterRig == null)
+        {
+            SeatSwitcher sw = Object.FindAnyObjectByType<SeatSwitcher>();
+            if (sw != null) coasterRig = sw.gameObject;
+        }
+
+        if (coasterRig == null)
+        {
+            Debug.LogWarning("[NPCSetupTool] Không tìm thấy CoasterRig trong Scene!");
+            return;
+        }
+
+        CoasterPassengerManager passengerMgr = coasterRig.GetComponent<CoasterPassengerManager>();
+        if (passengerMgr == null)
+        {
+            passengerMgr = coasterRig.AddComponent<CoasterPassengerManager>();
+            Undo.RegisterCreatedObjectUndo(passengerMgr, "Add CoasterPassengerManager");
+        }
+
+        RuntimeAnimatorController animCtrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorPath);
+        if (animCtrl != null) passengerMgr.masterAnimatorController = animCtrl;
+
+        string[] defaultPaths = new string[]
+        {
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/city/casual_Male_G.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/city/casual_Female_G.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/downtown/casual_Male_K.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/downtown/casual_Female_K.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/professions/Doctor_Male_B.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/professions/police_Female_A.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/elder/elder_Female_A.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/little_kids/little_boy_B.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/worker_Male_constructor_B.prefab",
+            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/disabilities/prostheticLeg_girl.prefab",
+            "Assets/3D Model/NPC/CityPeople_Free/Prefabs/Female_Adult/Female_Adult_ColorA.prefab",
+            "Assets/3D Model/NPC/CityPeople_Free/Prefabs/Female_Adult/Female_Adult_ColorB.prefab"
+        };
+
+        List<GameObject> loadedList = new List<GameObject>();
+        foreach (var path in defaultPaths)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab != null) loadedList.Add(prefab);
+        }
+        if (loadedList.Count > 0)
+        {
+            passengerMgr.npcPrefabs = loadedList.ToArray();
+        }
+
+        passengerMgr.npcScale = new Vector3(1.22f, 1.22f, 1.22f);
+        passengerMgr.stationStandingScale = Vector3.one;
+        passengerMgr.EnsureSitPoints();
+        EditorUtility.SetDirty(passengerMgr);
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+
+        Debug.Log("<color=#00FF66><b>[NPCSetupTool] Đã cấu hình xong hệ thống hành khách trên tàu!</b></color>");
     }
 
     private static AnimationClip LoadFirstClipFromFBX(string path)
@@ -149,7 +358,7 @@ public static class NPCSetupTool
     private static BoxCollider[] FindAllWalkZones()
     {
         List<BoxCollider> list = new List<BoxCollider>();
-        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
+        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         foreach (var b in allBoxes)
         {
             if (b == null) continue;
@@ -162,6 +371,153 @@ public static class NPCSetupTool
         return list.ToArray();
     }
 
+    [MenuItem("Tools/NPC System/1-Click Remove Station Solid Floor Colliders")]
+    public static void RemoveStationSolidColliders()
+    {
+        GameObject wtsMock = GameObject.Find("WTS_Mock");
+        if (wtsMock != null)
+        {
+            Transform floorRoot = wtsMock.transform.Find("Station_SolidFloors");
+            if (floorRoot != null)
+            {
+                Undo.DestroyObjectImmediate(floorRoot.gameObject);
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+                Debug.Log("<color=#FF6600><b>[NPCSetupTool] Đã gỡ bỏ Station_SolidFloors khỏi nhà ga WTS_Mock!</b></color>");
+                EditorUtility.DisplayDialog("Xóa Thành Công", "Đã xóa Station_SolidFloors khỏi nhà ga WTS_Mock.", "OK");
+                return;
+            }
+        }
+        EditorUtility.DisplayDialog("Thông Báo", "Không tìm thấy Station_SolidFloors trong WTS_Mock.", "OK");
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Remove Player Representative NPC Body")]
+    public static void RemovePlayerNPCBody()
+    {
+        GameObject xrOrigin = GameObject.Find("XR Origin (XR Rig)");
+        if (xrOrigin == null) xrOrigin = GameObject.FindGameObjectWithTag("Player");
+        if (xrOrigin != null)
+        {
+            PlayerNPCBodyController bodyCtrl = xrOrigin.GetComponent<PlayerNPCBodyController>();
+            if (bodyCtrl != null)
+            {
+                Undo.DestroyObjectImmediate(bodyCtrl);
+            }
+
+            Transform repBody = xrOrigin.transform.Find("PlayerRepresentativeBody");
+            if (repBody != null)
+            {
+                Undo.DestroyObjectImmediate(repBody.gameObject);
+            }
+
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            Debug.Log("<color=#FF6600><b>[NPCSetupTool] Đã gỡ bỏ PlayerNPCBodyController khỏi XR Origin!</b></color>");
+            EditorUtility.DisplayDialog("Xóa Thành Công", "Đã xóa PlayerNPCBodyController và Avatar đại diện khỏi XR Origin.", "OK");
+            return;
+        }
+        EditorUtility.DisplayDialog("Thông Báo", "Không tìm thấy XR Origin trong Scene.", "OK");
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Remove Coaster Passengers Setup")]
+    public static void RemoveCoasterPassengers()
+    {
+        GameObject coasterRig = GameObject.Find("CoasterRig");
+        if (coasterRig == null)
+        {
+            SeatSwitcher sw = Object.FindAnyObjectByType<SeatSwitcher>();
+            if (sw != null) coasterRig = sw.gameObject;
+        }
+
+        if (coasterRig != null)
+        {
+            CoasterPassengerManager mgr = coasterRig.GetComponent<CoasterPassengerManager>();
+            if (mgr != null)
+            {
+                Undo.DestroyObjectImmediate(mgr);
+            }
+
+            for (int i = coasterRig.transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = coasterRig.transform.GetChild(i);
+                if (child.name.StartsWith("Passenger_"))
+                {
+                    Undo.DestroyObjectImmediate(child.gameObject);
+                }
+            }
+
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            Debug.Log("<color=#FF6600><b>[NPCSetupTool] Đã gỡ bỏ CoasterPassengerManager và các hành khách tạm khỏi CoasterRig!</b></color>");
+            EditorUtility.DisplayDialog("Xóa Thành Công", "Đã gỡ bỏ CoasterPassengerManager khỏi CoasterRig.", "OK");
+            return;
+        }
+        EditorUtility.DisplayDialog("Thông Báo", "Không tìm thấy CoasterRig trong Scene.", "OK");
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Cleanup All Generated NPC & Station Setup")]
+    public static void CleanupAllNPCSetup()
+    {
+        bool confirm = EditorUtility.DisplayDialog("Xác Nhận Xóa Toàn Bộ NPC Setup", 
+            "Bạn có chắc muốn xóa/gỡ bỏ toàn bộ sàn nhà ga phụ (Station_SolidFloors), PlayerNPCBodyController trên XR Rig, và CoasterPassengerManager trên tàu lượn không?", 
+            "Xác Nhận Xóa", "Hủy");
+        if (!confirm) return;
+
+        // 1. Xóa Sàn nhà ga phụ
+        GameObject wtsMock = GameObject.Find("WTS_Mock");
+        if (wtsMock != null)
+        {
+            Transform floorRoot = wtsMock.transform.Find("Station_SolidFloors");
+            if (floorRoot != null) Undo.DestroyObjectImmediate(floorRoot.gameObject);
+        }
+
+        // 2. Xóa Player Body Controller
+        GameObject xrOrigin = GameObject.Find("XR Origin (XR Rig)");
+        if (xrOrigin == null) xrOrigin = GameObject.FindGameObjectWithTag("Player");
+        if (xrOrigin != null)
+        {
+            PlayerNPCBodyController bodyCtrl = xrOrigin.GetComponent<PlayerNPCBodyController>();
+            if (bodyCtrl != null) Undo.DestroyObjectImmediate(bodyCtrl);
+
+            Transform repBody = xrOrigin.transform.Find("PlayerRepresentativeBody");
+            if (repBody != null) Undo.DestroyObjectImmediate(repBody.gameObject);
+        }
+
+        // 3. Xóa Coaster Passengers
+        GameObject coasterRig = GameObject.Find("CoasterRig");
+        if (coasterRig == null)
+        {
+            SeatSwitcher sw = Object.FindAnyObjectByType<SeatSwitcher>();
+            if (sw != null) coasterRig = sw.gameObject;
+        }
+        if (coasterRig != null)
+        {
+            CoasterPassengerManager mgr = coasterRig.GetComponent<CoasterPassengerManager>();
+            if (mgr != null) Undo.DestroyObjectImmediate(mgr);
+
+            for (int i = coasterRig.transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = coasterRig.transform.GetChild(i);
+                if (child.name.StartsWith("Passenger_"))
+                {
+                    Undo.DestroyObjectImmediate(child.gameObject);
+                }
+            }
+        }
+
+        // 4. Gỡ ParkNPCWanderer trên các NPC công viên nếu có
+        GameObject npcRoot = GameObject.Find("NPC");
+        if (npcRoot != null)
+        {
+            ParkNPCWanderer[] wanderers = npcRoot.GetComponentsInChildren<ParkNPCWanderer>(true);
+            foreach (var w in wanderers)
+            {
+                if (w != null) Undo.DestroyObjectImmediate(w);
+            }
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log("<color=#FF6600><b>[NPCSetupTool] Đã dọn dẹp sạch toàn bộ các thành phần NPC & Nhà Ga vừa tạo!</b></color>");
+        EditorUtility.DisplayDialog("Dọn Dẹp Hoàn Tất", "Đã xóa sạch toàn bộ các thành phần NPC, Player Body, Coaster Passengers và Sàn nhà ga phụ!", "OK");
+    }
+
     private static void ApplyToSceneNPCs(RuntimeAnimatorController controller)
     {
         GameObject npcRoot = GameObject.Find("NPC");
@@ -172,6 +528,10 @@ public static class NPCSetupTool
         int count = 0;
         foreach (Transform child in npcRoot.transform)
         {
+            // Tắt script CityPeople cũ tránh lỗi gọi PlayAnyClip / CrossFade
+            MonoBehaviour cp = child.GetComponent("CityPeople") as MonoBehaviour;
+            if (cp != null) cp.enabled = false;
+
             Animator anim = child.GetComponent<Animator>();
             if (anim != null)
             {
@@ -193,120 +553,7 @@ public static class NPCSetupTool
             count++;
         }
 
-        Debug.Log($"[NPCSetupTool] Đã tự động gắn Animator và ParkNPCWanderer (kèm {walkZones.Length} WalkZone) cho {count} nhân vật trong 'NPC'!");
-    }
-
-    [MenuItem("Tools/NPC System/1-Click Restore & Auto-Spawn All NPCs")]
-    public static void RestoreAndAutoSpawnNPCs()
-    {
-        // 1. Đảm bảo AnimatorController & AvatarMask đã có
-        SetupNPCSystem();
-        AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorPath);
-
-        // 2. Tìm hoặc tạo GameObject cha "NPC"
-        GameObject npcRoot = GameObject.Find("NPC");
-        if (npcRoot == null)
-        {
-            npcRoot = new GameObject("NPC");
-            Undo.RegisterCreatedObjectUndo(npcRoot, "Create NPC Root");
-        }
-
-        BoxCollider[] walkZones = FindAllWalkZones();
-
-        // 3. Danh sách các Prefab nhân vật đầy đủ mọi thành phần
-        string[] prefabPaths = new string[]
-        {
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/city/casual_Male_G.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/city/casual_Female_G.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/downtown/casual_Male_K.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/downtown/casual_Female_K.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/professions/Doctor_Male_B.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/professions/police_Female_A.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/elder/elder_Female_A.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/little_kids/little_boy_B.prefab",
-            "Assets/3D Model/NPC/DenysAlmaral/CityPeople/Prefabs/worker_Male_constructor_B.prefab",
-            "Assets/3D Model/NPC/CityPeople_Free/Prefabs/Female_Adult/Female_Adult_ColorA.prefab"
-        };
-
-        // Xác định vị trí trung tâm đường dạo công viên
-        Vector3 baseSpawnPos = new Vector3(-1297f, 906.5f, 1121f);
-        GameObject returnPoint = GameObject.Find("CoasterReturrnMapPoint");
-        if (returnPoint != null)
-        {
-            baseSpawnPos = returnPoint.transform.position + returnPoint.transform.forward * 4f;
-        }
-
-        // Tự động nhận diện scale: Nếu Map_CongVien đã thu nhỏ (<0.5) thì NPC scale 1, nếu map cũ thì NPC scale 17
-        GameObject mapParent = GameObject.Find("Map_CongVien");
-        float npcScale = (mapParent != null && mapParent.transform.localScale.x < 0.5f) ? 1.0f : 17.0f;
-        if (mapParent != null && mapParent.transform.localScale.x < 0.5f)
-        {
-            baseSpawnPos = mapParent.transform.TransformPoint(new Vector3(0, 0, 0));
-        }
-
-        // Xóa các con cũ nếu có trong NPC để tránh trùng lặp
-        while (npcRoot.transform.childCount > 0)
-        {
-            Undo.DestroyObjectImmediate(npcRoot.transform.GetChild(0).gameObject);
-        }
-
-        // Spawn từng nhân vật và xếp vị trí rải đều
-        int spawnedCount = 0;
-        for (int i = 0; i < prefabPaths.Length; i++)
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPaths[i]);
-            if (prefab == null) continue;
-
-            GameObject npcInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, npcRoot.transform);
-            Undo.RegisterCreatedObjectUndo(npcInstance, "Spawn NPC");
-
-            // Rải vị trí so le nhau tránh va chạm dính chụm
-            float spacing = 3.5f * (npcScale > 1f ? npcScale * 0.25f : 1.2f);
-            float offsetX = ((i % 4) - 1.5f) * spacing;
-            float offsetZ = (i / 4) * (spacing * 1.3f);
-            npcInstance.transform.position = baseSpawnPos + new Vector3(offsetX, 0f, offsetZ);
-            npcInstance.transform.localScale = Vector3.one * npcScale;
-
-            // Gán Animator & Wanderer
-            Animator anim = npcInstance.GetComponent<Animator>();
-            if (anim != null)
-            {
-                anim.runtimeAnimatorController = controller;
-                anim.applyRootMotion = false;
-            }
-
-            ParkNPCWanderer wanderer = npcInstance.GetComponent<ParkNPCWanderer>();
-            if (wanderer == null)
-            {
-                wanderer = npcInstance.AddComponent<ParkNPCWanderer>();
-            }
-
-            wanderer.boundaryMode = ParkNPCWanderer.BoundaryMode.BoxZoneCollider;
-            wanderer.walkZoneColliders = walkZones;
-            wanderer.boundaryMargin = 0.35f;
-
-            spawnedCount++;
-        }
-
-        // Đảm bảo XR Origin có tốc độ đi bộ chuẩn và gán WalkZones
-        GameObject xrOrigin = GameObject.Find("XR Origin (XR Rig)");
-        if (xrOrigin != null)
-        {
-            XRFallbackWalkController walk = xrOrigin.GetComponent<XRFallbackWalkController>();
-            if (walk != null)
-            {
-                walk.walkSpeed = (npcScale > 1f) ? 15f : 3.5f;
-                walk.runSpeed = (npcScale > 1f) ? 30f : 7.0f;
-                walk.gravity = -9.81f;
-                walk.walkZoneColliders = walkZones;
-                walk.restrictToWalkZones = true;
-                EditorUtility.SetDirty(walk);
-            }
-        }
-
-        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
-        Debug.Log($"<color=#00FF66><b>[NPCSetupTool] Đã tự động khôi phục và spawn {spawnedCount} NPC vào công viên hoàn chỉnh!</b></color>");
-        EditorUtility.DisplayDialog("Khôi phục NPC thành công", $"Đã tự động tạo và rải đều {spawnedCount} nhân vật vào đường dạo công viên!\nMọi Animator và Script di chuyển đã được thiết lập sẵn sàng.", "Tuyệt vời");
+        Debug.Log($"[NPCSetupTool] Đã tự động gắn Animator và ParkNPCWanderer cho {count} nhân vật trong 'NPC'!");
     }
 }
 #endif

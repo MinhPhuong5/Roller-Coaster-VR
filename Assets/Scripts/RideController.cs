@@ -17,6 +17,7 @@ public class RideController : MonoBehaviour
 
     [Header("Phối hợp với ghế / khách")]
     public SeatSwitcher seatSwitcher;
+    public CoasterPassengerManager passengerManager;
 
     [Header("Motion Inverter")]
     public CoasterFollower motionInverter;
@@ -100,6 +101,21 @@ public class RideController : MonoBehaviour
             seatSwitcher = Object.FindAnyObjectByType<SeatSwitcher>();
         }
 
+        if (passengerManager == null)
+        {
+            passengerManager = GetComponent<CoasterPassengerManager>();
+            if (passengerManager == null) passengerManager = GetComponentInParent<CoasterPassengerManager>();
+            if (passengerManager == null) passengerManager = Object.FindAnyObjectByType<CoasterPassengerManager>();
+            if (passengerManager == null)
+            {
+                passengerManager = gameObject.AddComponent<CoasterPassengerManager>();
+            }
+        }
+        if (passengerManager != null)
+        {
+            passengerManager.rideController = this;
+        }
+
         if (xrOriginObject == null)
         {
             XRFallbackWalkController walk = Object.FindAnyObjectByType<XRFallbackWalkController>();
@@ -137,7 +153,13 @@ public class RideController : MonoBehaviour
             }
         }
 
-        // 4. Về đích: Đợi chạy đủ toàn bộ thời lượng vòng chạy
+        // 4. Cảm giác mạnh (giơ 2 tay lên) cho các NPC khi lao dốc tốc độ cao hoặc biến thiên độ cao
+        if (targetSpeed >= 1.25f && passengerManager != null)
+        {
+            passengerManager.TriggerThrillReaction(1.0f);
+        }
+
+        // 5. Về đích: Đợi chạy đủ toàn bộ thời lượng vòng chạy
         if (traveledAnimationTime >= (clipLength * numberOfLaps))
         {
             FinishRide();
@@ -229,6 +251,8 @@ public class RideController : MonoBehaviour
         hasPlayedBrakeSqueal = false;
         currentState = RideState.Riding;
 
+        if (passengerManager != null) passengerManager.SetAllPassengersThrilled(false);
+
         if (trackWindAudio != null)
         {
             trackWindAudio.pitch = minPitch;
@@ -251,6 +275,7 @@ public class RideController : MonoBehaviour
         state.speed = 0f;
         anim.Sample();
 
+        if (passengerManager != null) passengerManager.SetAllPassengersThrilled(false);
         if (trackWindAudio != null) trackWindAudio.Stop();
         if (clankAudio != null) clankAudio.Stop();
 

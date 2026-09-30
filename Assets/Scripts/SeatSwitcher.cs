@@ -24,6 +24,9 @@ public class SeatSwitcher : MonoBehaviour
     [Header("Ride Controller")]
     public RideController rideController;
 
+    [Header("Hành Khách & Body Người Chơi")]
+    public CoasterPassengerManager passengerManager;
+
     [Header("Rào Chắn Ga")]
     [Tooltip("Thanh chắn ga chính (hoặc kéo nhiều thanh chắn vào mảng stationGates)")]
     public StationGateController stationGate;
@@ -67,11 +70,17 @@ public class SeatSwitcher : MonoBehaviour
 
     private Transform mainCameraTransform;
     private Transform originalCamParent;
+    private float standingEyeHeight = 1.45f;
     private XRFallbackWalkController walkController;
+
+    void Awake()
+    {
+        CacheInitialCameraRig();
+    }
 
     void Start()
     {
-        CacheCameraReferences();
+        CacheInitialCameraRig();
         HideUI();
 
         if (startButton != null) startButton.SetActive(false);
@@ -89,10 +98,32 @@ public class SeatSwitcher : MonoBehaviour
             rideController = Object.FindAnyObjectByType<RideController>();
         }
 
+        if (passengerManager == null)
+        {
+            passengerManager = GetComponent<CoasterPassengerManager>();
+            if (passengerManager == null) passengerManager = GetComponentInParent<CoasterPassengerManager>();
+            if (passengerManager == null) passengerManager = Object.FindAnyObjectByType<CoasterPassengerManager>();
+            if (passengerManager == null)
+            {
+                passengerManager = gameObject.AddComponent<CoasterPassengerManager>();
+            }
+        }
+
         // Tự động tìm và gom toàn bộ thanh chắn trong Scene (kể cả các bản sao mới tạo)
         if (stationGates == null || stationGates.Length == 0)
         {
             stationGates = Object.FindObjectsByType<StationGateController>(FindObjectsSortMode.None);
+        }
+
+        if (mouseLook != null)
+        {
+            mouseLook.enabled = false;
+        }
+
+        if (walkController != null)
+        {
+            walkController.FindAndCacheWalkZones(true);
+            walkController.enabled = true;
         }
     }
 
@@ -126,8 +157,18 @@ public class SeatSwitcher : MonoBehaviour
         }
     }
 
-    private void CacheCameraReferences()
+    private void CacheInitialCameraRig()
     {
+        if (xrOriginRig == null)
+        {
+            xrOriginRig = GameObject.Find("XR Origin (XR Rig)");
+            if (xrOriginRig == null)
+            {
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null) xrOriginRig = player;
+            }
+        }
+
         if (xrOriginRig != null)
         {
             if (walkController == null)
@@ -142,6 +183,16 @@ public class SeatSwitcher : MonoBehaviour
                 {
                     mainCameraTransform = cam.transform;
                     originalCamParent = mainCameraTransform.parent;
+
+                    if (originalCamParent != null && originalCamParent != xrOriginRig.transform)
+                    {
+                        standingEyeHeight = originalCamParent.localPosition.y > 0.5f ? originalCamParent.localPosition.y : 1.45f;
+                    }
+                    else
+                    {
+                        standingEyeHeight = mainCameraTransform.localPosition.y > 0.5f ? mainCameraTransform.localPosition.y : 1.45f;
+                    }
+
                     if (mouseLook == null)
                     {
                         mouseLook = cam.GetComponent<MouseLook>();
@@ -168,32 +219,42 @@ public class SeatSwitcher : MonoBehaviour
     public void SwitchSeat(int index)
     {
         if (seats == null || seats.Length == 0) return;
-        CacheCameraReferences();
+        CacheInitialCameraRig();
 
         currentSeatIndex = index;
 
         if (walkController != null) walkController.enabled = false;
 
-        Transform targetSeat = seats[index];
+        Transform targetSitPoint = (passengerManager != null) ? passengerManager.GetSitPoint(index) : seats[index];
+        Vector3 seatedEyePos = (passengerManager != null) ? passengerManager.GetPlayerHeadEyePosition(index) : (targetSitPoint.position + targetSitPoint.up * 0.95f + targetSitPoint.forward * 0.08f);
 
-        // Ép mắt camera rơi chính xác vào tâm điểm 3 trục rotate của ghế
+        // Căn XR Origin sao cho Camera của người chơi rơi chính xác vào tầm mắt khi ngồi trong khoang tàu
         if (xrOriginRig != null)
         {
             CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
             if (cc != null) cc.enabled = false;
 
-            xrOriginRig.transform.SetParent(targetSeat);
+            xrOriginRig.transform.SetParent(targetSitPoint);
             xrOriginRig.transform.localRotation = Quaternion.identity;
             xrOriginRig.transform.localScale = Vector3.one;
 
             if (mainCameraTransform != null)
             {
-                Vector3 camLocalPos = xrOriginRig.transform.InverseTransformPoint(mainCameraTransform.position);
-                xrOriginRig.transform.localPosition = -camLocalPos;
+                Camera cam = mainCameraTransform.GetComponent<Camera>();
+                if (cam != null) cam.nearClipPlane = 0.035f;
+
+                // Triệt tiêu chiều cao đứng của XR Origin để đặt Camera vào đúng vị trí mắt khi ngồi
+                Vector3 cameraOffsetFromRig = mainCameraTransform.position - xrOriginRig.transform.position;
+                xrOriginRig.transform.position = seatedEyePos - cameraOffsetFromRig;
             }
             else
             {
-                xrOriginRig.transform.localPosition = Vector3.zero;
+                xrOriginRig.transform.position = seatedEyePos - (Vector3.up * 1.36f);
+            }
+
+            if (passengerManager != null)
+            {
+                passengerManager.SetPlayerPassenger(index, xrOriginRig.transform);
             }
 
             if (cc != null) cc.enabled = true;
@@ -201,9 +262,17 @@ public class SeatSwitcher : MonoBehaviour
         }
         else if (mainCameraTransform != null)
         {
-            mainCameraTransform.SetParent(targetSeat);
-            mainCameraTransform.localPosition = Vector3.zero;
-            mainCameraTransform.localRotation = Quaternion.identity;
+            mainCameraTransform.SetParent(targetSitPoint);
+            mainCameraTransform.position = seatedEyePos;
+            mainCameraTransform.localRotation = targetSitPoint.rotation;
+
+            Camera cam = mainCameraTransform.GetComponent<Camera>();
+            if (cam != null) cam.nearClipPlane = 0.035f;
+
+            if (passengerManager != null)
+            {
+                passengerManager.SetPlayerPassenger(index, targetSitPoint);
+            }
         }
 
         // Bật xoay góc nhìn chuột trong khoang tàu
@@ -239,55 +308,19 @@ public class SeatSwitcher : MonoBehaviour
     }
 
     /// <summary>
-    /// Đưa người chơi ra sàn ga và ép góc nhìn nhìn thẳng vào bảng chọn ghế
+    /// Đưa người chơi ra sàn ga và phục hồi chiều cao đứng chuẩn nhìn thẳng vào bảng chọn ghế
     /// </summary>
     public void ForceBoardingMode()
     {
-        CacheCameraReferences();
-
-        if (walkController != null) walkController.enabled = false;
-
-        // 1. Tháo người chơi ra khỏi ghế và đưa ra đứng tại VR_FloorPoint
-        if (xrOriginRig != null)
+        if (passengerManager != null)
         {
-            xrOriginRig.SetActive(true);
-            xrOriginRig.transform.SetParent(null);
-            xrOriginRig.transform.localScale = Vector3.one;
-
-            if (stationFloorPoint != null)
-            {
-                CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
-                if (cc != null) cc.enabled = false;
-
-                xrOriginRig.transform.SetPositionAndRotation(stationFloorPoint.position, stationFloorPoint.rotation);
-
-                if (cc != null) cc.enabled = true;
-                Physics.SyncTransforms();
-            }
+            passengerManager.ReleasePlayerPassenger();
+            passengerManager.ClearOldPassengers();
         }
 
-        // 2. Trả Main Camera về vị trí gốc và ép góc quay thẳng
-        if (mainCameraTransform != null && originalCamParent != null)
-        {
-            if (mainCameraTransform.parent != originalCamParent)
-            {
-                mainCameraTransform.SetParent(originalCamParent);
-            }
-            mainCameraTransform.localPosition = Vector3.zero;
-            mainCameraTransform.localRotation = Quaternion.identity;
-        }
+        RestoreStandingPlayer(stationFloorPoint);
 
-        // 3. Reset MouseLook để hướng nhìn khóa thẳng theo hướng của sàn ga (hướng vào UI)
-        if (mouseLook != null)
-        {
-            mouseLook.enabled = true;
-            Quaternion targetRotation = stationFloorPoint != null ? stationFloorPoint.rotation : Quaternion.identity;
-            mouseLook.ResetLook(targetRotation);
-        }
-
-        SetControllersActive(true);
-
-        // Mở chuột tự do
+        // Mở chuột tự do để chọn ghế
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
@@ -428,44 +461,14 @@ public class SeatSwitcher : MonoBehaviour
         isRiding = false;
         isHandlingExit = false;
 
-        // 1. Tháo người chơi ra khỏi ghế, đưa ra đứng ở VR_FloorPoint
-        if (xrOriginRig != null)
+        // 1. Tháo người chơi và đưa toàn bộ 4 NPC ra đứng tại sảnh ga
+        if (passengerManager != null)
         {
-            xrOriginRig.SetActive(true);
-            xrOriginRig.transform.SetParent(null);
-            xrOriginRig.transform.localScale = Vector3.one;
-
-            if (stationFloorPoint != null)
-            {
-                CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
-                if (cc != null) cc.enabled = false;
-
-                xrOriginRig.transform.SetPositionAndRotation(stationFloorPoint.position, stationFloorPoint.rotation);
-
-                if (cc != null) cc.enabled = true;
-                Physics.SyncTransforms();
-            }
+            passengerManager.UnseatAllPassengersToStation(stationFloorPoint);
         }
 
-        // 2. Trả Main Camera về vị trí chuẩn và xoay thẳng
-        if (mainCameraTransform != null && originalCamParent != null)
-        {
-            if (mainCameraTransform.parent != originalCamParent)
-            {
-                mainCameraTransform.SetParent(originalCamParent);
-            }
-            mainCameraTransform.localPosition = Vector3.zero;
-            mainCameraTransform.localRotation = Quaternion.identity;
-        }
-
-        if (mouseLook != null)
-        {
-            mouseLook.enabled = true;
-            Quaternion targetRotation = stationFloorPoint != null ? stationFloorPoint.rotation : Quaternion.identity;
-            mouseLook.ResetLook(targetRotation);
-        }
-
-        SetControllersActive(true);
+        // 2. Đưa người chơi ra đứng ở VR_FloorPoint với chiều cao mắt đứng chuẩn
+        RestoreStandingPlayer(stationFloorPoint);
 
         // 3. Mở chuột tự do
         Cursor.lockState = CursorLockMode.None;
@@ -477,8 +480,76 @@ public class SeatSwitcher : MonoBehaviour
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
-            Debug.Log("[SeatSwitcher] Đã dừng hẳn tại ga -> Bật GameOverGroup thành công!");
+            Debug.Log("[SeatSwitcher] Đã dừng hẳn tại ga -> Đưa toàn bộ NPC ra sảnh ga và bật GameOverGroup!");
         }
+    }
+
+    private void RestoreStandingPlayer(Transform targetSpawnPoint)
+    {
+        CacheInitialCameraRig();
+
+        // 1. Tháo XR Origin ra khỏi tàu và đưa về vị trí sàn
+        if (xrOriginRig != null)
+        {
+            CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+
+            xrOriginRig.transform.SetParent(null);
+            xrOriginRig.transform.localScale = Vector3.one;
+
+            if (targetSpawnPoint != null)
+            {
+                Vector3 spawnPos = targetSpawnPoint.position;
+                RaycastHit hit;
+                if (Physics.Raycast(spawnPos + Vector3.up * 1.5f, Vector3.down, out hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    spawnPos = hit.point + Vector3.up * 0.02f;
+                }
+                xrOriginRig.transform.SetPositionAndRotation(spawnPos, targetSpawnPoint.rotation);
+            }
+
+            if (cc != null) cc.enabled = true;
+            Physics.SyncTransforms();
+        }
+
+        // 2. Trả Main Camera về cha ban đầu và ĐẶT ĐÚNG TẦM MẮT NGƯỜI ĐỨNG (1.45m)
+        if (mainCameraTransform != null)
+        {
+            if (originalCamParent != null && mainCameraTransform.parent != originalCamParent)
+            {
+                mainCameraTransform.SetParent(originalCamParent);
+            }
+
+            if (originalCamParent != null && originalCamParent != xrOriginRig.transform)
+            {
+                // Nếu có Camera Offset: đặt Camera Offset ở độ cao mắt và Camera ở (0,0,0)
+                originalCamParent.localPosition = new Vector3(0f, standingEyeHeight, 0f);
+                originalCamParent.localRotation = Quaternion.identity;
+                mainCameraTransform.localPosition = Vector3.zero;
+            }
+            else
+            {
+                // Nếu Camera gắn trực tiếp vào XR Origin: đặt Camera ở độ cao mắt
+                mainCameraTransform.localPosition = new Vector3(0f, standingEyeHeight, 0f);
+            }
+
+            mainCameraTransform.localRotation = Quaternion.identity;
+        }
+
+        // 3. Tắt xoay góc nhìn chuột trong tàu, bật bộ điều khiển đi bộ tự do
+        if (mouseLook != null)
+        {
+            mouseLook.enabled = false;
+        }
+
+        if (walkController != null)
+        {
+            walkController.FindAndCacheWalkZones(true);
+            walkController.enabled = true;
+            walkController.InitCameraAngles();
+        }
+
+        SetControllersActive(true);
     }
 
     private void SetControllersActive(bool isActive)
@@ -494,25 +565,13 @@ public class SeatSwitcher : MonoBehaviour
     {
         Time.timeScale = 1f;
 
-        if (xrOriginRig != null)
+        if (passengerManager != null)
         {
-            xrOriginRig.transform.SetParent(null);
-
-            if (parkReturnPoint != null)
-            {
-                CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
-                if (cc != null) cc.enabled = false;
-
-                xrOriginRig.transform.SetPositionAndRotation(parkReturnPoint.position, parkReturnPoint.rotation);
-
-                if (cc != null) cc.enabled = true;
-                Physics.SyncTransforms();
-            }
-
-            if (walkController != null) walkController.enabled = true;
+            passengerManager.ReleasePlayerPassenger();
+            passengerManager.ClearOldPassengers();
         }
 
-        if (mouseLook != null) mouseLook.enabled = false;
+        RestoreStandingPlayer(parkReturnPoint);
 
         HideUI();
         Cursor.lockState = CursorLockMode.None;

@@ -217,7 +217,14 @@ public class RollerCoasterInteraction : MonoBehaviour
 
             xrOriginObject.transform.SetParent(null);
             xrOriginObject.transform.localScale = Vector3.one;
-            xrOriginObject.transform.SetPositionAndRotation(stationEntryPoint.position, stationEntryPoint.rotation);
+
+            Vector3 spawnPos = stationEntryPoint.position;
+            RaycastHit hit;
+            if (Physics.Raycast(spawnPos + Vector3.up * 1.5f, Vector3.down, out hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                spawnPos = hit.point + Vector3.up * 0.02f;
+            }
+            xrOriginObject.transform.SetPositionAndRotation(spawnPos, stationEntryPoint.rotation);
 
             if (cc != null) cc.enabled = true;
             Physics.SyncTransforms();

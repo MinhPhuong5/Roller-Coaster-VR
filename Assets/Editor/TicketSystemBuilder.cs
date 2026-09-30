@@ -13,6 +13,23 @@ public static class TicketSystemBuilder
         BuildTicketSystemUI(silent: false);
     }
 
+    [MenuItem("Tools/Ticket System/1-Click Remove Ticket UI")]
+    public static void RemoveTicketSystemUI()
+    {
+        GameObject canvasObj = GameObject.Find("Canvas_TicketSystem");
+        if (canvasObj != null)
+        {
+            Undo.DestroyObjectImmediate(canvasObj);
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            Debug.Log("<color=#FF6600><b>[TicketSystemBuilder] Đã xóa Canvas_TicketSystem khỏi Scene!</b></color>");
+            EditorUtility.DisplayDialog("Xóa Thành Công", "Đã gỡ bỏ Giao Diện Bán Vé (Canvas_TicketSystem) khỏi Scene.", "OK");
+        }
+        else
+        {
+            EditorUtility.DisplayDialog("Thông Báo", "Không tìm thấy Canvas_TicketSystem trong Scene để xóa.", "OK");
+        }
+    }
+
     public static void BuildTicketSystemUI(bool silent = false)
     {
         string scenePath = "Assets/Scenes/ParkScene.unity";

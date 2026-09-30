@@ -68,6 +68,9 @@ public class ParkNPCWanderer : MonoBehaviour
 
     void Awake()
     {
+        MonoBehaviour cp = GetComponent("CityPeople") as MonoBehaviour;
+        if (cp != null) cp.enabled = false;
+
         animator = GetComponent<Animator>();
         characterController = GetComponent<CharacterController>();
 
