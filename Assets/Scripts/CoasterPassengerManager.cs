@@ -7,18 +7,21 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// Quản lý 4 NPC ngẫu nhiên (hoàn toàn không trùng lặp) ngồi trong 4 ghế tàu lượn:
-/// - Sử dụng 4 điểm đệm ghế SitPoints độc lập: GIỮ NGUYÊN 100% tọa độ do bạn chỉnh sửa trong Inspector/Scene, KHÔNG BAO GIỜ tự ý ghi đè/reset về mặc định!
-/// - Khi bấm Play: NPC sẽ được đặt CHÍNH XÁC tại vị trí SitPoint của bạn (hipToSitPointOffset = (0,0,0)).
-/// - Không sinh NPC xem trước trong Editor để tránh lỗi animation đứng.
-/// - Giữ nguyên Scale 1.22x.
-/// - Đồng bộ XR Camera rơi đúng tầm mắt người ngồi và ẩn đầu NPC đại diện.
-/// - Tự động giơ 2 tay khi gặp biến thiên độ cao (đổ dốc / lượn dốc).
+/// Quản lý 4 hành khách (1 người chơi + 3 NPC ngẫu nhiên độc nhất) trên tàu lượn siêu tốc:
+/// - Khi ở sảnh ga: Các ghế hoàn toàn trống, KHÔNG sinh trước NPC để tránh xung đột/lỗi.
+/// - Khi người chơi bấm chọn ghế:
+///   + Đặt NPC đại diện của người chơi vào ghế đã chọn.
+///   + Sinh đúng 3 NPC ngẫu nhiên hoàn toàn không trùng lặp và không trùng với người chơi.
+///   + Tăng Scale lên 1.22x chuẩn tỷ lệ khoang tàu lượn.
+///   + Kích hoạt tư thế ngồi (IsSitting = true).
+/// - Khi tàu chạy qua các đoạn biến thiên độ cao / đổ dốc / tốc độ cao:
+///   + Cả 3 NPC và người chơi sẽ tự động giơ tay / vẫy tay (IsThrilled = true) tạo cảm giác mạnh chân thực.
+/// - Khi kết thúc chuyến tàu: Đưa hành khách ra sảnh ga đi dạo an toàn.
 /// </summary>
 public class CoasterPassengerManager : MonoBehaviour
 {
     [Header("1. DANH SÁCH PREFAB NPC")]
-    [Tooltip("Danh sách các mẫu NPC để chọn ngẫu nhiên 4 người không trùng lặp")]
+    [Tooltip("Danh sách các mẫu NPC để chọn ngẫu nhiên 3 người không trùng lặp và không trùng với người chơi")]
     public GameObject[] npcPrefabs;
 
     [Tooltip("Animator Controller chuẩn có sẵn các layer Sitting và Thrill Reaction")]
@@ -28,40 +31,43 @@ public class CoasterPassengerManager : MonoBehaviour
     public Transform[] seats;
 
     [Header("3. 4 ĐIỂM ĐỆM GHẾ CHUYÊN DỤNG (SIT POINTS)")]
-    [Tooltip("4 điểm đại diện cho đáy lòng đệm ghế do bạn tùy chỉnh vị trí: SitPoint_FrontLeft, SitPoint_FrontRight, SitPoint_BackLeft, SitPoint_BackRight")]
+    [Tooltip("4 điểm đệm ghế: SitPoint_FrontLeft, SitPoint_FrontRight, SitPoint_BackLeft, SitPoint_BackRight")]
     public Transform[] sitPoints = new Transform[4];
 
-    [Header("4. CĂN CHỈNH TƯ THẾ NGỒI THEO SIT POINT")]
-    [Tooltip("Tỷ lệ Scale NPC khi ngồi trong tàu")]
+    [Header("4. SCALE & CĂN CHỈNH TƯ THẾ NGỒI")]
+    [Tooltip("Hệ số Scale tăng kích thước NPC khi ngồi trên tàu lượn (Mặc định 1.22x)")]
+    public float scaleMultiplier = 1.22f;
+
+    [Tooltip("Tỷ lệ Scale cục bộ của NPC khi ngồi trong tàu (1.22x)")]
     public Vector3 npcScale = new Vector3(1.22f, 1.22f, 1.22f);
 
-    [Tooltip("Tỷ lệ Scale khi đứng ngoài sảnh ga (2.93x tương ứng với scale đoàn tàu và nhà ga)")]
-    public Vector3 stationStandingScale = new Vector3(2.928f, 2.928f, 2.928f);
+    [Tooltip("Tỷ lệ Scale khi đứng ngoài sảnh ga (1:1 chuẩn người thật)")]
+    public Vector3 stationStandingScale = Vector3.one;
 
-    [Tooltip("Độ lệch vị trí gốc model so với SitPoint (Mặc định Vector3.zero để NPC bám chính xác 100% vào vị trí SitPoint bạn kéo trong Scene)")]
+    [Tooltip("Độ lệch vị trí so với SitPoint (Mặc định Vector3.zero để bám chuẩn 100% SitPoint)")]
     public Vector3 hipToSitPointOffset = Vector3.zero;
 
-    [Tooltip("Vị trí mặc định ban đầu khi TẠO MỚI SitPoint lần đầu (nếu chưa có trong Scene)")]
-    public Vector3 defaultNewSitPointOffset = new Vector3(0f, -0.85f, 0.12f);
-
+    [Tooltip("Độ lệch góc xoay ghế")]
     public Vector3 seatRotationOffset = Vector3.zero;
 
     [Header("5. TẦM MẮT NGƯỜI CHƠI (SEATED EYE ALIGNMENT)")]
-    [Tooltip("Độ lệch mắt so với xương đầu Head Bone")]
     public float eyeForwardOffset = 0.08f;
     public float eyeHeightOffset = 0.03f;
 
     [Header("6. CẢM GIÁC MẠNH KHI BIẾN THIÊN ĐỘ CAO (THRILL REACTION)")]
-    public float verticalDropVelocityThreshold = -0.8f;
-    public float slopePitchDropThreshold = 0.12f;
-    public float suddenAltitudeChangeThreshold = 2.2f;
-    public float thrillHoldDuration = 0.6f;
+    [Tooltip("Vận tốc rơi thẳng đứng tối thiểu để kích hoạt giơ tay (m/s)")]
+    public float verticalDropVelocityThreshold = -1.5f;
+    [Tooltip("Góc chúi đầu dốc tối thiểu (Dot product với Vector3.down)")]
+    public float slopePitchDropThreshold = 0.35f;
+    [Tooltip("Tụt độ cao cực mạnh (m/s)")]
+    public float suddenAltitudeChangeThreshold = -2.5f;
+    [Tooltip("Thời gian giữ tư thế giơ tay sau mỗi cú rơi (giây)")]
+    public float thrillHoldDuration = 1.2f;
 
     [Header("7. LIÊN KẾT RIDE CONTROLLER")]
     public RideController rideController;
 
     [Header("8. ĐIỂM ĐỨNG NGOÀI SẢNH GA (STATION EXIT POINTS)")]
-    [Tooltip("4 điểm đứng của 4 hành khách ngoài sảnh ga khi kết thúc chuyến tàu (nếu để trống script sẽ tự tính tỏa đều ra 2 bên sàn ga)")]
     public Transform[] stationExitPoints = new Transform[4];
 
     // Danh sách 4 đối tượng NPC thực tế đang ngồi trên 4 ghế
@@ -93,14 +99,37 @@ public class CoasterPassengerManager : MonoBehaviour
             if (rideController == null) rideController = GetComponentInParent<RideController>();
             if (rideController == null) rideController = Object.FindAnyObjectByType<RideController>();
         }
+
+        // Cập nhật scale vector dựa theo multiplier (1.22x)
+        if (scaleMultiplier > 0.01f)
+        {
+            npcScale = new Vector3(scaleMultiplier, scaleMultiplier, scaleMultiplier);
+            stationStandingScale = new Vector3(scaleMultiplier, scaleMultiplier, scaleMultiplier);
+        }
+        else
+        {
+            scaleMultiplier = 1.22f;
+            npcScale = new Vector3(1.22f, 1.22f, 1.22f);
+            stationStandingScale = new Vector3(1.22f, 1.22f, 1.22f);
+        }
+
+        // SitPoint là điểm đặt mông trên đệm ghế -> Offset = Vector3.zero để mông nhân vật đặt vừa vặn 100%
+        hipToSitPointOffset = Vector3.zero;
+        seatRotationOffset = Vector3.zero;
+
+        // Đảm bảo các ngưỡng phát hiện cảm giác mạnh chuẩn xác (chỉ kích hoạt khi rơi/lao dốc)
+        verticalDropVelocityThreshold = -1.5f;
+        slopePitchDropThreshold = 0.35f;
+        suddenAltitudeChangeThreshold = -2.5f;
     }
 
     void Start()
     {
         EnsureSitPoints();
 
-        // Không sinh trước NPC khi mới bắt đầu game ở công viên.
-        // Chỉ sinh 3 NPC vào 3 ghế còn lại khi người chơi đến ga chọn ghế ngồi!
+        // 1. Dọn dẹp sạch sẽ toàn bộ ghế khi mới vào sảnh ga
+        // NPC sẽ CHỈ xuất hiện khi người chơi bấm chọn ghế ngồi!
+        ClearOldPassengers();
 
         Vector3 currentPos = GetCurrentCartPosition();
         lastCartPosY = currentPos.y;
@@ -113,47 +142,7 @@ public class CoasterPassengerManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Vẽ Gizmo trực quan 4 điểm đệm ghế SitPoints và 4 điểm đứng ngoài sàn ga
-    /// </summary>
-    void OnDrawGizmos()
-    {
-        if (sitPoints != null)
-        {
-            for (int i = 0; i < sitPoints.Length; i++)
-            {
-                Transform sp = sitPoints[i];
-                if (sp != null)
-                {
-                    // Vẽ quả cầu màu Cyan tại mặt đệm ghế
-                    Gizmos.color = new Color(0f, 0.9f, 1f, 0.8f);
-                    Gizmos.DrawWireSphere(sp.position, 0.12f);
-                    Gizmos.DrawRay(sp.position, sp.forward * 0.35f);
-
-                    // Vẽ hộp đệm ngồi màu xanh lá mờ
-                    Gizmos.color = new Color(0f, 1f, 0.4f, 0.3f);
-                    Gizmos.DrawCube(sp.position, new Vector3(0.45f, 0.08f, 0.45f));
-                }
-            }
-        }
-
-        if (stationExitPoints != null)
-        {
-            for (int i = 0; i < stationExitPoints.Length; i++)
-            {
-                Transform ep = stationExitPoints[i];
-                if (ep != null)
-                {
-                    Gizmos.color = new Color(1f, 0.85f, 0.1f, 0.9f);
-                    Gizmos.DrawWireSphere(ep.position, 0.2f);
-                    Gizmos.DrawRay(ep.position, ep.forward * 0.5f);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Tự động tạo hoặc lấy 4 điểm đệm ghế SitPoint. 
-    /// TUYỆT ĐỐI KHÔNG GHI ĐÈ VỊ TRÍ ĐÃ ĐƯỢC NGƯỜI DÙNG TÙY CHỈNH THỦ CÔNG!
+    /// Đảm bảo có đủ 4 điểm đệm ghế SitPoint
     /// </summary>
     public void EnsureSitPoints()
     {
@@ -168,7 +157,6 @@ public class CoasterPassengerManager : MonoBehaviour
 
         for (int i = 0; i < 4; i++)
         {
-            // 1. Nếu đã có tham chiếu hợp lệ thì giữ nguyên, không đụng vào transform
             Transform sp = (sitPoints != null && i < sitPoints.Length) ? sitPoints[i] : null;
 
             if (sp == null)
@@ -181,26 +169,17 @@ public class CoasterPassengerManager : MonoBehaviour
                 }
             }
 
-            // 2. Chỉ tạo mới khi trong Scene hoàn toàn chưa có GameObject này
             if (sp == null)
             {
                 Transform parentSeat = (seats != null && i < seats.Length && seats[i] != null) ? seats[i] : transform;
                 GameObject spObj = new GameObject(sitPointNames[i]);
                 spObj.transform.SetParent(parentSeat, false);
-                spObj.transform.localPosition = defaultNewSitPointOffset;
+                spObj.transform.localPosition = new Vector3(0f, -0.85f, 0.12f);
                 spObj.transform.localRotation = Quaternion.identity;
                 spObj.transform.localScale = Vector3.one;
                 sp = spObj.transform;
-
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                {
-                    Undo.RegisterCreatedObjectUndo(spObj, "Create SitPoint");
-                }
-#endif
             }
 
-            // Gán vào mảng và TUYỆT ĐỐI KHÔNG RESET / GHI ĐÈ LOCALPOSITION ĐÃ CHỈNH SỬA
             sitPoints[i] = sp;
         }
     }
@@ -219,11 +198,14 @@ public class CoasterPassengerManager : MonoBehaviour
         return transform;
     }
 
-    /// <summary>
-    /// Lấy vị trí tầm mắt chuẩn thực tế từ xương đầu (Head Bone) của NPC tại ghế chỉ định
-    /// </summary>
     public Vector3 GetPlayerHeadEyePosition(int seatIndex)
     {
+        PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
+        if (seatIndex == currentPlayerSeatIndex && playerBody != null)
+        {
+            return playerBody.GetSeatedEyePosition(GetSitPoint(seatIndex));
+        }
+
         if (seatIndex >= 0 && seatIndex < passengerHeadBones.Length && passengerHeadBones[seatIndex] != null)
         {
             Transform head = passengerHeadBones[seatIndex];
@@ -233,15 +215,13 @@ public class CoasterPassengerManager : MonoBehaviour
         Transform sp = GetSitPoint(seatIndex);
         if (sp != null)
         {
-            return sp.position + (sp.up * 0.90f) + (sp.forward * 0.08f);
+            return sp.position + (sp.up * 0.85f * scaleMultiplier) + (sp.forward * 0.08f);
         }
         return transform.position + Vector3.up * 0.85f;
     }
 
     /// <summary>
-    /// <summary>
-    /// <summary>
-    /// Gán người chơi vào ghế được chọn và sinh 3 NPC ngẫu nhiên (không trùng người chơi) vào 3 ghế còn lại
+    /// Gán người chơi vào ghế được chọn và sinh 3 NPC ngẫu nhiên (hoàn toàn không trùng lặp, không trùng người chơi) vào 3 ghế còn lại
     /// </summary>
     public void SetPlayerPassenger(int seatIndex, Transform xrOriginParent)
     {
@@ -251,9 +231,18 @@ public class CoasterPassengerManager : MonoBehaviour
         currentPlayerSeatIndex = Mathf.Clamp(seatIndex, 0, 3);
         isPlayerSeated = true;
 
+        // 1. Dọn dẹp triệt để các NPC cũ hoặc rác thừa trên tàu TRƯỚC KHI xếp hành khách mới
+        ClearOldPassengers();
+
+        // 2. Tính toán Scale 1.22x chuẩn cho khoang tàu
+        if (scaleMultiplier > 0.01f)
+        {
+            npcScale = new Vector3(scaleMultiplier, scaleMultiplier, scaleMultiplier);
+        }
+
         Transform sp = GetSitPoint(currentPlayerSeatIndex);
 
-        // 1. Đặt avatar người chơi vào ghế đã chọn
+        // 3. Đặt avatar người chơi vào ghế đã chọn với Scale 1.22x và tư thế ngồi chuẩn SitPoint
         PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
         GameObject playerModelPrefab = null;
         if (playerBody != null)
@@ -262,22 +251,31 @@ public class CoasterPassengerManager : MonoBehaviour
             playerModelPrefab = playerBody.chosenPlayerPrefab;
         }
 
-        // 2. Dọn dẹp các NPC hành khách cũ trên tàu
-        ClearOldPassengers();
-
-        // 3. Chuẩn bị pool 3 NPC khác biệt hoàn toàn với model của người chơi
+        // 4. Chuẩn bị danh sách Pool NPC LOẠI TRỪ hoàn toàn model của người chơi
         List<GameObject> pool = new List<GameObject>();
         if (npcPrefabs != null)
         {
             foreach (var p in npcPrefabs)
             {
                 if (p == null) continue;
-                if (playerModelPrefab != null && (p == playerModelPrefab || p.name == playerModelPrefab.name)) continue;
-                if (!pool.Contains(p)) pool.Add(p);
+
+                // Loại trừ model của người chơi (so sánh cả reference lẫn tên prefab)
+                if (playerModelPrefab != null)
+                {
+                    if (p == playerModelPrefab || p.name.Equals(playerModelPrefab.name, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                }
+
+                if (!pool.Contains(p))
+                {
+                    pool.Add(p);
+                }
             }
         }
 
-        // Trộn ngẫu nhiên (Fisher-Yates Shuffle)
+        // 5. Trộn ngẫu nhiên hoàn toàn (Fisher-Yates Shuffle)
         for (int i = 0; i < pool.Count; i++)
         {
             int r = Random.Range(i, pool.Count);
@@ -286,29 +284,30 @@ public class CoasterPassengerManager : MonoBehaviour
             pool[r] = tmp;
         }
 
-        // 4. Sinh 3 NPC lấp đầy 3 ghế còn lại
+        // 6. Sinh đúng 3 NPC độc nhất vào 3 ghế còn lại
         int poolIdx = 0;
         for (int i = 0; i < 4; i++)
         {
             if (i == currentPlayerSeatIndex)
             {
-                spawnedPassengerObjects[i] = null;
-                passengerAnimators[i] = null;
-                passengerHeadBones[i] = null;
+                spawnedPassengerObjects[i] = playerBody != null ? playerBody.currentNPCBody : null;
+                passengerAnimators[i] = playerBody != null ? playerBody.currentNPCBody?.GetComponent<Animator>() : null;
+                passengerHeadBones[i] = playerBody != null ? playerBody.GetHeadTransform() : null;
                 continue;
             }
 
             Transform seatTransform = GetSitPoint(i);
             if (seatTransform == null) continue;
 
-            GameObject prefabToSpawn = (pool.Count > 0) ? pool[poolIdx % pool.Count] : null;
+            // Đảm bảo lấy từng NPC riêng biệt, không trùng lặp
+            GameObject prefabToSpawn = (pool.Count > poolIdx) ? pool[poolIdx] : (pool.Count > 0 ? pool[poolIdx % pool.Count] : null);
             poolIdx++;
 
             if (prefabToSpawn != null)
             {
                 GameObject npcInstance = Instantiate(prefabToSpawn, seatTransform);
                 npcInstance.name = $"Passenger_{i}_{prefabToSpawn.name}";
-                npcInstance.transform.localPosition = hipToSitPointOffset;
+                npcInstance.transform.localPosition = Vector3.zero;
                 npcInstance.transform.localRotation = Quaternion.Euler(seatRotationOffset);
                 npcInstance.transform.localScale = npcScale;
 
@@ -322,10 +321,33 @@ public class CoasterPassengerManager : MonoBehaviour
                         anim.runtimeAnimatorController = masterAnimatorController;
                     }
                     anim.applyRootMotion = false;
+                    anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                     anim.SetBool(IsSittingParam, true);
                     anim.SetBool(IsWalkingParam, false);
                     anim.SetFloat(SpeedParam, 0f);
                     anim.SetBool(IsThrilledParam, false);
+                    anim.SetLayerWeight(1, 0f);
+                    anim.Play("Sitting", 0, 0f);
+                    anim.Update(0f); // Ép Animator tính toán ngay tư thế ngồi để lấy vị trí xương mông
+                }
+
+                // CĂN CHỈNH TÍNH CHỖ NGỒI BẰNG MÔNG (HIPS/PELVIS):
+                // Dịch chuyển vị trí root sao cho xương Mông (Hips) trùng khớp 100% với SitPoint của đệm ghế
+                Transform hips = FindHipsBone(npcInstance);
+                if (hips != null)
+                {
+                    Vector3 hipWorldOffset = hips.position - seatTransform.position;
+                    npcInstance.transform.position -= hipWorldOffset;
+                }
+                else
+                {
+                    // Fallback nếu không đo được xương: hạ root xuống theo chiều cao mông ngồi
+                    npcInstance.transform.localPosition = new Vector3(0f, -0.58f * npcScale.y, 0f);
+                }
+
+                if (hipToSitPointOffset != Vector3.zero)
+                {
+                    npcInstance.transform.position += seatTransform.TransformDirection(hipToSitPointOffset);
                 }
 
                 Transform head = null;
@@ -333,6 +355,8 @@ public class CoasterPassengerManager : MonoBehaviour
                 {
                     head = anim.GetBoneTransform(HumanBodyBones.Head);
                 }
+                if (head == null) head = FindChildRecursive(npcInstance.transform, "bip Head");
+                if (head == null) head = FindChildRecursive(npcInstance.transform, "bip head");
                 if (head == null) head = FindChildRecursive(npcInstance.transform, "Head");
                 if (head == null) head = FindChildRecursive(npcInstance.transform, "head");
                 if (head == null) head = FindChildRecursive(npcInstance.transform, "mixamorig:Head");
@@ -343,12 +367,9 @@ public class CoasterPassengerManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"<color=#00FF88><b>[CoasterPassengerManager] Đã xếp người chơi vào ghế {seatIndex} và sinh 3 NPC khác vào 3 ghế còn lại!</b></color>");
+        Debug.Log($"<color=#00FF88><b>[CoasterPassengerManager] Đã xếp người chơi vào ghế {seatIndex} và sinh 3 NPC độc nhất vào 3 ghế còn lại (Scale {npcScale.x})!</b></color>");
     }
 
-    /// <summary>
-    /// Trả NPC đại diện cho người chơi về lại ghế gốc khi rời tàu
-    /// </summary>
     public void ReleasePlayerPassenger()
     {
         PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
@@ -362,11 +383,10 @@ public class CoasterPassengerManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Đưa toàn bộ hành khách ra khỏi tàu và kích hoạt cho họ đi dạo tự nhiên trong sảnh ga
+    /// Đưa toàn bộ hành khách ra khỏi tàu và kích hoạt đi dạo tự nhiên trong sảnh ga
     /// </summary>
     public void UnseatAllPassengersToStation(Transform stationRef)
     {
-        // 1. Giải phóng người chơi trước để không bị kéo theo NPC
         ReleasePlayerPassenger();
 
         Vector3 basePos = (stationRef != null) ? stationRef.position : transform.position;
@@ -374,7 +394,6 @@ public class CoasterPassengerManager : MonoBehaviour
         Vector3 rightDir = (stationRef != null) ? stationRef.right : transform.right;
         Vector3 fwdDir = (stationRef != null) ? stationRef.forward : transform.forward;
 
-        // Vị trí đứng xuất phát ở hành lang sảnh ga (lùi về phía sau và dạt sang hai bên sảnh, TUYỆT ĐỐI không đứng trước mặt bảng UI)
         Vector3[] safeStationSpawnOffsets = new Vector3[]
         {
             rightDir * 3.2f - fwdDir * 1.5f,
@@ -383,15 +402,17 @@ public class CoasterPassengerManager : MonoBehaviour
             -rightDir * 4.2f - fwdDir * 3.0f
         };
 
+        Transform sp0 = GetSitPoint(0);
+        float cartLossyScale = (sp0 != null && sp0.lossyScale.y > 0.01f) ? sp0.lossyScale.y : 2.4f;
+        Vector3 dynamicStationScale = new Vector3(cartLossyScale * scaleMultiplier, cartLossyScale * scaleMultiplier, cartLossyScale * scaleMultiplier);
+
         for (int i = 0; i < 4; i++)
         {
             GameObject npcObj = spawnedPassengerObjects[i];
             if (npcObj == null) continue;
 
-            // 1. Tháo NPC ra khỏi ghế tàu
             npcObj.transform.SetParent(null);
 
-            // 2. Đặt vị trí ra sàn ga an toàn (không chắn tầm nhìn UI)
             if (stationExitPoints != null && i < stationExitPoints.Length && stationExitPoints[i] != null)
             {
                 npcObj.transform.SetPositionAndRotation(stationExitPoints[i].position, stationExitPoints[i].rotation);
@@ -403,16 +424,13 @@ public class CoasterPassengerManager : MonoBehaviour
                 npcObj.transform.SetPositionAndRotation(targetPos, targetRot);
             }
 
-            // 3. Đặt Scale đứng 1:1 chuẩn người thật
-            npcObj.transform.localScale = Vector3.one;
+            npcObj.transform.localScale = dynamicStationScale;
 
-            // 4. Bật lại đầu đầy đủ
             if (passengerHeadBones[i] != null)
             {
                 passengerHeadBones[i].localScale = Vector3.one;
             }
 
-            // 5. Bật CharacterController và Collider
             CharacterController cc = npcObj.GetComponent<CharacterController>();
             if (cc == null) cc = npcObj.AddComponent<CharacterController>();
             cc.radius = 0.28f;
@@ -426,7 +444,6 @@ public class CoasterPassengerManager : MonoBehaviour
                 if (col != cc) col.enabled = true;
             }
 
-            // 6. Gán / Bật ParkNPCWanderer để NPC thực sự đi dạo trong sảnh ga
             ParkNPCWanderer wanderer = npcObj.GetComponent<ParkNPCWanderer>();
             if (wanderer == null) wanderer = npcObj.AddComponent<ParkNPCWanderer>();
 
@@ -438,7 +455,6 @@ public class CoasterPassengerManager : MonoBehaviour
             wanderer.maxWaitTime = 5.0f;
             wanderer.enabled = true;
 
-            // 7. Cập nhật Animator
             Animator anim = passengerAnimators[i];
             if (anim != null)
             {
@@ -450,55 +466,24 @@ public class CoasterPassengerManager : MonoBehaviour
             }
         }
 
-        Debug.Log("<color=#00FF99><b>[CoasterPassengerManager] Đã đưa toàn bộ 4 NPC ra sảnh ga và kích hoạt đi dạo tự do!</b></color>");
+        Debug.Log("<color=#00FF99><b>[CoasterPassengerManager] Đã đưa 4 NPC ra sảnh ga và kích hoạt đi dạo tự do!</b></color>");
     }
 
-    private BoxCollider[] FindStationWalkZones()
+    public void TriggerThrillReaction(float duration = 1.2f)
     {
-        List<BoxCollider> stationZones = new List<BoxCollider>();
-        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
-        foreach (var box in allBoxes)
+        // Không kích hoạt khi đang ở đoạn kéo xích lên dốc (lift hill)
+        if (rideController != null)
         {
-            if (box == null) continue;
-            string objName = box.gameObject.name.ToLower();
-            if (objName.Contains("walkzone") || objName.Contains("walk_zone") || objName.Contains("playzone"))
-            {
-                stationZones.Add(box);
-            }
-        }
-        return stationZones.ToArray();
-    }
-
-    private void RestorePassengerToSeat(int index)
-    {
-        if (index < 0 || index >= 4) return;
-
-        GameObject npcObj = spawnedPassengerObjects[index];
-        Transform sp = GetSitPoint(index);
-
-        if (npcObj != null && sp != null)
-        {
-            npcObj.transform.SetParent(sp);
-            npcObj.transform.localPosition = hipToSitPointOffset;
-            npcObj.transform.localRotation = Quaternion.Euler(seatRotationOffset);
-            npcObj.transform.localScale = npcScale;
+            float currentProgress = rideController.CurrentTraveledTime;
+            if (currentProgress < 11.0f) return;
         }
 
-        // Bật lại đầu bình thường
-        if (passengerHeadBones[index] != null)
-        {
-            passengerHeadBones[index].localScale = Vector3.one;
-        }
-    }
-
-    public void TriggerThrillReaction(float duration = 1.0f)
-    {
         thrillHoldTimer = Mathf.Max(thrillHoldTimer, duration);
         SetAllPassengersThrilled(true);
     }
 
     /// <summary>
-    /// Tự động phát hiện biến thiên độ cao (đổ dốc, góc chúi, lượn dốc nhanh) để kích hoạt giơ 2 tay
+    /// Tự động phát hiện biến thiên độ cao và tốc độ để kích hoạt giơ 2 tay cảm giác mạnh (chỉ khi đổ dốc/lao dốc, không giơ khi đang kéo xích lên dốc)
     /// </summary>
     private void DetectHeightVariationAndThrill()
     {
@@ -508,6 +493,19 @@ public class CoasterPassengerManager : MonoBehaviour
         {
             thrillHoldTimer = 0f;
             SetAllPassengersThrilled(false);
+            return;
+        }
+
+        float progress = (rideController != null) ? rideController.CurrentTraveledTime : 0f;
+
+        // TUYỆT ĐỐI KHÔNG GIƠ TAY KHI ĐANG KÉO XÍCH LÊN DỐC (0s -> 11s)
+        if (progress < 11.0f)
+        {
+            thrillHoldTimer = 0f;
+            SetAllPassengersThrilled(false);
+            Vector3 p = GetCurrentCartPosition();
+            lastCartPosY = p.y;
+            hasRecordedLastPos = true;
             return;
         }
 
@@ -528,19 +526,22 @@ public class CoasterPassengerManager : MonoBehaviour
 
             Transform cartTransform = GetCartTransform();
 
-            // 1. Góc chúi đầu xuống dốc (Pitch Angle)
+            // 1. Góc chúi đầu xuống dốc (Pitch Down Angle >= 20 độ)
             float pitchDot = (cartTransform != null) ? Vector3.Dot(cartTransform.forward, Vector3.down) : 0f;
-            bool isDippingDown = (pitchDot > 0.08f);
+            bool isDippingDown = (pitchDot > slopePitchDropThreshold);
 
-            // 2. Lao dốc tụt độ cao nhanh
-            bool isFallingDown = (verticalVelocity < -0.25f);
+            // 2. Lao dốc tụt độ cao nhanh xuống phía dưới (< -1.5 m/s)
+            bool isFallingDown = (verticalVelocity < verticalDropVelocityThreshold);
 
-            // 3. Biến thiên độ cao đột ngột (G-force / Lượn dốc mạnh)
-            bool isSuddenChange = (Mathf.Abs(verticalVelocity) > 1.2f);
+            // 3. Rơi tự do hoặc tụt dốc cực mạnh (< -2.5 m/s)
+            bool isSuddenDrop = (verticalVelocity < suddenAltitudeChangeThreshold);
 
-            if (isFallingDown || isDippingDown || isSuddenChange)
+            // 4. Các đoạn đường ray tốc độ cao (không tính đoạn vào ga cuối)
+            bool isFastSection = (progress > 11.5f && progress < 86.0f && (isFallingDown || isDippingDown));
+
+            if (isFallingDown || isDippingDown || isSuddenDrop || isFastSection)
             {
-                thrillHoldTimer = Mathf.Max(thrillHoldTimer, 1.0f);
+                thrillHoldTimer = Mathf.Max(thrillHoldTimer, thrillHoldDuration);
             }
         }
 
@@ -649,107 +650,14 @@ public class CoasterPassengerManager : MonoBehaviour
 #endif
     }
 
-    /// <summary>
-    /// Sinh ngẫu nhiên 4 NPC hoàn toàn khác nhau đặt vào 4 SitPoint của tàu (chỉ khi Play mode)
-    /// </summary>
-    public void SpawnRandomPassengers()
-    {
-        EnsureSitPoints();
-        LoadDefaultAssetsIfEmpty();
-
-        if (sitPoints == null || sitPoints.Length < 4 || sitPoints[0] == null)
-        {
-            Debug.LogWarning("[CoasterPassengerManager] Chưa tạo đủ 4 SitPoint trên tàu!");
-            return;
-        }
-
-        // 1. Dọn dẹp các NPC cũ nếu có
-        ClearOldPassengers();
-
-        // 2. Tạo danh sách pool ngẫu nhiên không trùng lặp
-        List<GameObject> pool = new List<GameObject>();
-        if (npcPrefabs != null && npcPrefabs.Length > 0)
-        {
-            foreach (var p in npcPrefabs)
-            {
-                if (p != null && !pool.Contains(p))
-                {
-                    pool.Add(p);
-                }
-            }
-        }
-
-        if (pool.Count == 0)
-        {
-            Debug.LogWarning("[CoasterPassengerManager] Danh sách npcPrefabs đang trống!");
-            return;
-        }
-
-        // Trộn ngẫu nhiên hoàn toàn (Fisher-Yates Shuffle)
-        for (int i = 0; i < pool.Count; i++)
-        {
-            int randomIndex = Random.Range(i, pool.Count);
-            GameObject temp = pool[i];
-            pool[i] = pool[randomIndex];
-            pool[randomIndex] = temp;
-        }
-
-        // 3. Gắn 4 NPC độc nhất vào 4 SitPoint
-        for (int i = 0; i < 4; i++)
-        {
-            Transform sitPointTransform = sitPoints[i];
-            if (sitPointTransform == null) continue;
-
-            GameObject prefabToSpawn = pool[i % pool.Count];
-            GameObject npcInstance = Instantiate(prefabToSpawn, sitPointTransform);
-            npcInstance.name = $"Passenger_{i}_{prefabToSpawn.name}";
-
-            // Cố định vị trí ngồi: Đặt chính xác 100% tại tọa độ SitPoint
-            npcInstance.transform.localPosition = hipToSitPointOffset;
-            npcInstance.transform.localRotation = Quaternion.Euler(seatRotationOffset);
-            npcInstance.transform.localScale = npcScale;
-
-            // Vô hiệu hóa các script di chuyển/vật lý để NPC ngồi yên theo tàu
-            DisableUnneededComponents(npcInstance);
-
-            // Cố định Animator tư thế ngồi
-            Animator anim = npcInstance.GetComponent<Animator>();
-            if (anim != null)
-            {
-                if (masterAnimatorController != null)
-                {
-                    anim.runtimeAnimatorController = masterAnimatorController;
-                }
-                anim.applyRootMotion = false;
-                anim.SetBool(IsSittingParam, true);
-                anim.SetBool(IsWalkingParam, false);
-                anim.SetFloat(SpeedParam, 0f);
-                anim.SetBool(IsThrilledParam, false);
-            }
-
-            // Tìm xương đầu (Head Bone)
-            Transform head = null;
-            if (anim != null && anim.isHuman)
-            {
-                head = anim.GetBoneTransform(HumanBodyBones.Head);
-            }
-            if (head == null) head = FindChildRecursive(npcInstance.transform, "Head");
-            if (head == null) head = FindChildRecursive(npcInstance.transform, "head");
-            if (head == null) head = FindChildRecursive(npcInstance.transform, "mixamorig:Head");
-
-            spawnedPassengerObjects[i] = npcInstance;
-            passengerAnimators[i] = anim;
-            passengerHeadBones[i] = head;
-        }
-
-        Debug.Log($"<color=#00FF88><b>[CoasterPassengerManager] Đã gắn 4 NPC ngồi chuẩn theo các điểm SitPoints của bạn!</b></color>");
-    }
-
     public void ClearOldPassengers()
     {
+        PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
+        Transform playerBodyTransform = (playerBody != null && playerBody.currentNPCBody != null) ? playerBody.currentNPCBody.transform : null;
+
         for (int i = 0; i < spawnedPassengerObjects.Length; i++)
         {
-            if (spawnedPassengerObjects[i] != null)
+            if (i != currentPlayerSeatIndex && spawnedPassengerObjects[i] != null)
             {
 #if UNITY_EDITOR
                 if (!Application.isPlaying)
@@ -777,7 +685,10 @@ public class CoasterPassengerManager : MonoBehaviour
             for (int c = parent.childCount - 1; c >= 0; c--)
             {
                 Transform child = parent.GetChild(c);
-                if (child.name.StartsWith("Passenger_"))
+                if (playerBodyTransform != null && child == playerBodyTransform) continue;
+
+                // Xóa các passenger cũ hoặc mesh/animator rác nằm dưới ghế
+                if (child.name.StartsWith("Passenger_") || child.GetComponent<Animator>() != null || child.GetComponent<SkinnedMeshRenderer>() != null)
                 {
 #if UNITY_EDITOR
                     if (!Application.isPlaying) DestroyImmediate(child.gameObject);
@@ -789,13 +700,21 @@ public class CoasterPassengerManager : MonoBehaviour
             }
         }
 
-        // Dọn dẹp cả những NPC đang đứng ngoài sảnh ga (parent == null)
         if (Application.isPlaying)
         {
             GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             foreach (var go in allObjects)
             {
-                if (go != null && go.name.StartsWith("Passenger_") && (go.transform.parent == null || go.transform.parent.name.Contains("Station")))
+                if (go == null) continue;
+                if (playerBodyTransform != null && go.transform == playerBodyTransform) continue;
+
+                // Xóa các bản Passenger clone bị rơi ra ngoài sảnh
+                if (go.name.StartsWith("Passenger_") && (go.transform.parent == null || go.transform.parent.name.Contains("Station")))
+                {
+                    Destroy(go);
+                }
+                // Xóa NPC tĩnh dư thừa bị đặt nhầm vào tọa độ khoang tàu trong scene
+                else if (go.name.Contains("casual_Male_G (1)") && go.transform.parent == null)
                 {
                     Destroy(go);
                 }
@@ -803,39 +722,25 @@ public class CoasterPassengerManager : MonoBehaviour
         }
     }
 
-    private void CachePassengerComponents()
-    {
-        for (int i = 0; i < 4; i++)
-        {
-            if (spawnedPassengerObjects != null && i < spawnedPassengerObjects.Length && spawnedPassengerObjects[i] != null)
-            {
-                GameObject npc = spawnedPassengerObjects[i];
-                Animator anim = npc.GetComponent<Animator>();
-                passengerAnimators[i] = anim;
-
-                Transform head = null;
-                if (anim != null && anim.isHuman)
-                {
-                    head = anim.GetBoneTransform(HumanBodyBones.Head);
-                }
-                if (head == null) head = FindChildRecursive(npc.transform, "Head");
-                if (head == null) head = FindChildRecursive(npc.transform, "head");
-                if (head == null) head = FindChildRecursive(npc.transform, "mixamorig:Head");
-                passengerHeadBones[i] = head;
-            }
-        }
-    }
-
     private void DisableUnneededComponents(GameObject npc)
     {
+        if (npc == null) return;
+
         ParkNPCWanderer wanderer = npc.GetComponent<ParkNPCWanderer>();
-        if (wanderer != null) wanderer.enabled = false;
+        if (wanderer != null) DestroyImmediate(wanderer);
 
         CharacterController cc = npc.GetComponent<CharacterController>();
         if (cc != null) cc.enabled = false;
 
-        MonoBehaviour cityPeople = npc.GetComponent("CityPeople") as MonoBehaviour;
-        if (cityPeople != null) cityPeople.enabled = false;
+        // Xóa hoàn toàn script CityPeople để không bị CityPeople.Start() chạy ShuffleClips / CrossFade đè lên tư thế ngồi
+        MonoBehaviour[] scripts = npc.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var mb in scripts)
+        {
+            if (mb != null && (mb.GetType().Name == "CityPeople" || mb.GetType().FullName.Contains("CityPeople")))
+            {
+                DestroyImmediate(mb);
+            }
+        }
 
         Rigidbody rb = npc.GetComponent<Rigidbody>();
         if (rb != null)
@@ -844,29 +749,11 @@ public class CoasterPassengerManager : MonoBehaviour
             rb.detectCollisions = false;
         }
 
-        Collider[] colliders = npc.GetComponentsInChildren<Collider>();
+        Collider[] colliders = npc.GetComponentsInChildren<Collider>(true);
         foreach (var col in colliders)
         {
             col.enabled = false;
         }
-    }
-
-    public Transform GetPassengerHead(int seatIndex)
-    {
-        if (seatIndex >= 0 && seatIndex < passengerHeadBones.Length)
-        {
-            return passengerHeadBones[seatIndex];
-        }
-        return null;
-    }
-
-    public GameObject GetPassengerObject(int seatIndex)
-    {
-        if (seatIndex >= 0 && seatIndex < spawnedPassengerObjects.Length)
-        {
-            return spawnedPassengerObjects[seatIndex];
-        }
-        return null;
     }
 
     public void SetAllPassengersThrilled(bool isThrilled)
@@ -874,14 +761,17 @@ public class CoasterPassengerManager : MonoBehaviour
         if (isCurrentlyThrilled == isThrilled) return;
         isCurrentlyThrilled = isThrilled;
 
+        // Cập nhật cho 3 NPC hành khách
         for (int i = 0; i < passengerAnimators.Length; i++)
         {
             if (passengerAnimators[i] != null)
             {
                 passengerAnimators[i].SetBool(IsThrilledParam, isThrilled);
+                passengerAnimators[i].SetLayerWeight(1, isThrilled ? 1f : 0f);
             }
         }
 
+        // Cập nhật cho NPC đại diện của người chơi
         PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
         if (playerBody != null)
         {
@@ -899,6 +789,40 @@ public class CoasterPassengerManager : MonoBehaviour
             Transform found = FindChildRecursive(parent.GetChild(i), childName);
             if (found != null) return found;
         }
+        return null;
+    }
+
+    /// <summary>
+    /// Tìm xương mông/hông (Hips/Pelvis) của NPC theo chuẩn Humanoid hoặc rig xương cụ thể (bip Pelvis, Hips, mixamo...)
+    /// </summary>
+    public static Transform FindHipsBone(GameObject npc)
+    {
+        if (npc == null) return null;
+
+        Animator anim = npc.GetComponent<Animator>();
+        if (anim != null && anim.isHuman)
+        {
+            Transform h = anim.GetBoneTransform(HumanBodyBones.Hips);
+            if (h != null) return h;
+        }
+
+        string[] hipNames = new string[] { "bip Pelvis", "bip pelvis", "Pelvis", "pelvis", "Hips", "hips", "mixamorig:Hips" };
+        foreach (var hName in hipNames)
+        {
+            Transform h = FindChildRecursive(npc.transform, hName);
+            if (h != null) return h;
+        }
+
+        Transform[] allChildren = npc.GetComponentsInChildren<Transform>(true);
+        foreach (var t in allChildren)
+        {
+            string n = t.name.ToLower();
+            if ((n.Contains("pelvis") || n.Contains("hip")) && !n.Contains("cloth") && !n.Contains("mesh"))
+            {
+                return t;
+            }
+        }
+
         return null;
     }
 }

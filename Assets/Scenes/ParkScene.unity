@@ -355,12 +355,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 21724885}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 289.17, y: 1.9, z: -424.87}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.0899353, y: 6.8589, z: 37.544983}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1188116698}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &23028027
 GameObject:
@@ -5333,12 +5333,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 305233462}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 250.34, y: 1.33, z: -424.87}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -38.919952, y: 6.2889, z: 37.544983}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1188116698}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &315265783
 GameObject:
@@ -8428,7 +8428,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1738291810}
         m_TargetAssemblyTypeName: RollerCoasterInteraction, Assembly-CSharp
         m_MethodName: OnConfirmStartGame
         m_Mode: 1
@@ -16343,7 +16343,7 @@ MonoBehaviour:
   - {fileID: 4552685038025500937, guid: 2a3e1e176c8dcfd4db59e20030b74013, type: 3}
   - {fileID: 1193138585393553888, guid: f9c11c212145f9a4cb4c2e3cd4fc08ae, type: 3}
   - {fileID: 6235000539097917739, guid: 39af6f1e99f66754dbfcde753539df1b, type: 3}
-  standingScale: {x: 1, y: 1, z: 1}
+  standingScale: {x: 1.22, y: 1.22, z: 1.22}
   seatedScale: {x: 1.22, y: 1.22, z: 1.22}
   chosenPlayerPrefabIndex: -1
   chosenPlayerPrefab: {fileID: 0}
@@ -18122,7 +18122,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1030607011
 RectTransform:
   m_ObjectHideFlags: 0
@@ -18150,7 +18150,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1030607010}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -19493,11 +19493,11 @@ Transform:
   m_GameObject: {fileID: 1077804850}
   serializedVersion: 2
   m_LocalRotation: {x: -0.015530999, y: 0.68742, z: 0.016400581, w: 0.7259088}
-  m_LocalPosition: {x: 0.06, y: 0.042, z: 0.12}
-  m_LocalScale: {x: 0.88235295, y: 0.41176468, z: 0.3529412}
+  m_LocalPosition: {x: 3.69, y: 10.34, z: 41.9}
+  m_LocalScale: {x: 150, y: 70, z: 60}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1575212786}
+  m_Father: {fileID: 1188116698}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1083047327
 GameObject:
@@ -20520,6 +20520,9 @@ Transform:
   - {fileID: 2142079732}
   - {fileID: 1738291809}
   - {fileID: 1770888257}
+  - {fileID: 305233464}
+  - {fileID: 21724887}
+  - {fileID: 1077804851}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1191170339
@@ -23032,7 +23035,7 @@ MonoBehaviour:
   - {fileID: 570145564}
   npcScale: {x: 1.22, y: 1.22, z: 1.22}
   stationStandingScale: {x: 1, y: 1, z: 1}
-  hipToSitPointOffset: {x: 0, y: -0.55, z: 0.05}
+  hipToSitPointOffset: {x: 0, y: 0, z: 0}
   defaultNewSitPointOffset: {x: 0, y: -0.85, z: 0.12}
   seatRotationOffset: {x: 0, y: 0, z: 0}
   eyeForwardOffset: 0.08
@@ -24835,9 +24838,6 @@ PrefabInstance:
       addedObject: {fileID: 62290146}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1077804851}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1766579944}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       insertIndex: -1
@@ -26087,9 +26087,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d390872021e987e41b113bd022669182, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RollerCoasterInteraction
-  confirmationModalPanel: {fileID: 0}
-  confirmStartButton: {fileID: 0}
-  cancelCloseButton: {fileID: 0}
+  confirmationModalPanel: {fileID: 1030607010}
+  confirmStartButton: {fileID: 541510343}
+  cancelCloseButton: {fileID: 30116186}
   modalTitleText: {fileID: 0}
   modalMessageText: {fileID: 0}
   activationDistance: 4
@@ -151901,6 +151901,4 @@ SceneRoots:
   - {fileID: 1933141021}
   - {fileID: 1575212785}
   - {fileID: 1188116698}
-  - {fileID: 305233464}
-  - {fileID: 21724887}
   - {fileID: 995824249}

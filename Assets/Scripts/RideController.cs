@@ -153,8 +153,8 @@ public class RideController : MonoBehaviour
             }
         }
 
-        // 4. Cảm giác mạnh (giơ 2 tay lên) cho các NPC khi lao dốc tốc độ cao hoặc biến thiên độ cao
-        if (targetSpeed >= 1.25f && passengerManager != null)
+        // 4. Cảm giác mạnh (giơ 2 tay lên) cho các NPC khi lao dốc tốc độ cao (chỉ sau khi đã qua dốc xích kéo > 11.0s)
+        if (currentLoopTime > 11.0f && targetSpeed >= 1.6f && passengerManager != null)
         {
             passengerManager.TriggerThrillReaction(1.0f);
         }
@@ -331,6 +331,10 @@ public class RideController : MonoBehaviour
                 xrOriginObject.transform.SetPositionAndRotation(mapReturnPoint.position, mapReturnPoint.rotation);
                 if (cc != null) cc.enabled = true;
                 Physics.SyncTransforms();
+
+                PlayerNPCBodyController playerBody = xrOriginObject.GetComponent<PlayerNPCBodyController>();
+                if (playerBody == null) playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
+                if (playerBody != null) playerBody.SetParkScale();
 
                 XRFallbackWalkController walkCtrl = xrOriginObject.GetComponent<XRFallbackWalkController>();
                 if (walkCtrl != null) walkCtrl.enabled = true;

@@ -76,6 +76,12 @@ public class ParkNPCWanderer : MonoBehaviour
 
         if (animator != null)
         {
+            if (animator.runtimeAnimatorController == null)
+            {
+#if UNITY_EDITOR
+                animator.runtimeAnimatorController = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/3D Model/NPC/NPC_Master_Animator.controller");
+#endif
+            }
             animator.applyRootMotion = false;
         }
 
@@ -492,7 +498,7 @@ public class ParkNPCWanderer : MonoBehaviour
 
     private void UpdateAnimator(float speedValue, bool isWalking)
     {
-        if (animator == null) return;
+        if (animator == null || animator.runtimeAnimatorController == null) return;
         animator.SetFloat(SpeedParam, speedValue);
         animator.SetBool(IsWalkingParam, isWalking);
     }

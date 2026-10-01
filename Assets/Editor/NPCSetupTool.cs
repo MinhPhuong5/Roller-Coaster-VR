@@ -15,41 +15,41 @@ public static class NPCSetupTool
     {
         EnsurePlayerBodyLayerRegistered();
 
-        // 1. Tạo AvatarMask chỉ lấy phần thân trên
+        // 1. Tạo / Cập nhật AvatarMask chỉ lấy duy nhất 2 cánh tay (KHÔNG đụng tới Body, Head, Root hay Chân)
         AvatarMask upperBodyMask = AssetDatabase.LoadAssetAtPath<AvatarMask>(MaskPath);
         if (upperBodyMask == null)
         {
             upperBodyMask = new AvatarMask();
             upperBodyMask.name = "UpperBody_Mask";
-
-            // Bật thân trên, đầu, 2 tay. Tắt hông và 2 chân
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Root, false);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Body, true);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Head, true);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftArm, true);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightArm, true);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftFingers, true);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightFingers, true);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftLeg, false);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightLeg, false);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftFootIK, false);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightFootIK, false);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftHandIK, true);
-            upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightHandIK, true);
-
             AssetDatabase.CreateAsset(upperBodyMask, MaskPath);
-            Debug.Log("[NPCSetupTool] Đã tạo thành công: " + MaskPath);
         }
 
-        // 2. Tìm các Animation Clips
+        // TẮT hoàn toàn Root, Body (ngực/lưng/cột sống), Head (đầu/cổ), Hips, Legs. CHỈ BẬT 2 cánh tay và bàn tay
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Root, false);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Body, false);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Head, false);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftArm, true);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightArm, true);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftFingers, true);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightFingers, true);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftLeg, false);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightLeg, false);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftFootIK, false);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightFootIK, false);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftHandIK, true);
+        upperBodyMask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightHandIK, true);
+        EditorUtility.SetDirty(upperBodyMask);
+        Debug.Log("[NPCSetupTool] Đã cấu hình UpperBody_Mask CHỈ tác động 2 cánh tay (Body & Head = FALSE) tại: " + MaskPath);
+
+        // 2. Tìm các Animation Clips chuẩn
         AnimationClip walkClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/locom_m_basicWalk_30f.fbx");
         AnimationClip idleClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/idle_m_1_200f.fbx");
         AnimationClip sitClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Sitting Idle.fbx");
         
-        // Hoạt ảnh mạo hiểm / giơ vẫy tay sống động
-        AnimationClip thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/dance_hype_100f.fbx");
+        // Hoạt ảnh mạo hiểm / giơ 2 tay lên cao (Hands Up / Hanging Idle / Falling) - KHÔNG DÙNG DANCE HYPE
+        AnimationClip thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle.fbx");
         if (thrillClip == null) thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Falling.fbx");
-        if (thrillClip == null) thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle.fbx");
+        if (thrillClip == null) thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle (1).fbx");
 
         // 3. Tạo hoặc nạp AnimatorController
         AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(AnimatorPath);
@@ -91,6 +91,7 @@ public static class NPCSetupTool
         anyToSit.AddCondition(AnimatorConditionMode.If, 0, "IsSitting");
         anyToSit.hasExitTime = false;
         anyToSit.duration = 0.25f;
+        anyToSit.canTransitionToSelf = false;
 
         var sitToIdle = sitState.AddTransition(idleState);
         sitToIdle.AddCondition(AnimatorConditionMode.IfNot, 0, "IsSitting");
@@ -103,7 +104,7 @@ public static class NPCSetupTool
         AnimatorControllerLayer upperLayer = new AnimatorControllerLayer
         {
             name = "UpperBody_Reaction",
-            defaultWeight = 1.0f,
+            defaultWeight = 0.0f,
             blendingMode = AnimatorLayerBlendingMode.Override,
             avatarMask = upperBodyMask,
             stateMachine = new AnimatorStateMachine()
@@ -112,9 +113,10 @@ public static class NPCSetupTool
         upperLayer.stateMachine.hideFlags = HideFlags.HideInHierarchy;
         AssetDatabase.AddObjectToAsset(upperLayer.stateMachine, AnimatorPath);
 
-        // State mặc định: Empty (motion = null). Giúp Base Layer hoàn toàn tự do (tay vung tự nhiên khi đi bộ/đứng ở công viên)
+        // State mặc định: Empty (motion = sitClip). Giữ tư thế tay ngồi tự nhiên và triệt tiêu hoàn toàn T-Pose khi chưa kích hoạt IsThrilled
         AnimatorState emptyState = upperLayer.stateMachine.AddState("Empty", new Vector3(250, 100, 0));
-        emptyState.motion = null;
+        emptyState.motion = sitClip;
+        emptyState.writeDefaultValues = true;
 
         // State phản ứng lao dốc / tốc độ cao (Vẫy tay & Giơ tay sống động)
         AnimatorState thrillReactionState = upperLayer.stateMachine.AddState("Thrill_Reaction", new Vector3(250, 220, 0));
@@ -198,7 +200,7 @@ public static class NPCSetupTool
         bodyCtrl.ResolvePlayerReferences();
         bodyCtrl.SetupCameraCulling();
         bodyCtrl.LoadDefaultAssetsIfEmpty();
-        bodyCtrl.standingScale = Vector3.one;
+        bodyCtrl.standingScale = new Vector3(1.22f, 1.22f, 1.22f);
         bodyCtrl.seatedScale = new Vector3(1.22f, 1.22f, 1.22f);
 
         EditorUtility.SetDirty(bodyCtrl);
@@ -334,7 +336,7 @@ public static class NPCSetupTool
         }
 
         passengerMgr.npcScale = new Vector3(1.22f, 1.22f, 1.22f);
-        passengerMgr.stationStandingScale = Vector3.one;
+        passengerMgr.stationStandingScale = new Vector3(1.22f, 1.22f, 1.22f);
         passengerMgr.EnsureSitPoints();
         EditorUtility.SetDirty(passengerMgr);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());

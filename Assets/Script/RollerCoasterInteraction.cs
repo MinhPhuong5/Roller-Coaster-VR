@@ -1,12 +1,16 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
 /// Quét cự ly tự động cho ga Tàu Lượn:
-/// - Người chơi lại gần -> Hiện Panel xác nhận.
+/// - Khi Play: Mặc định ẩn hoàn toàn bảng UI.
+/// - Người chơi lại gần trong bán kính activationDistance -> Hiện Panel xác nhận.
 /// - Người chơi lùi ra xa -> Tự động ẩn Panel.
-/// - Không phụ thuộc Collider/Rigidbody, chạy mượt mà trên cả PC và kính Quest 2.
+/// - Bấm 'Có / Bắt đầu': Dịch chuyển người chơi đến ga tàu lượn (VR_FloorPoint) và mở bảng chọn ghế (SeatSwitcher).
+/// - Bấm 'Không / Hủy': Đóng bảng xác nhận.
+/// - Tự động tìm kiếm & liên kết đầy đủ các component (UI Panel, Button, XR Origin, VR_FloorPoint, SeatSwitcher) nếu trong Inspector chưa gán.
 /// </summary>
 public class RollerCoasterInteraction : MonoBehaviour
 {
@@ -34,69 +38,182 @@ public class RollerCoasterInteraction : MonoBehaviour
     [Tooltip("Script quản lý ghế ngồi tàu lượn")]
     public SeatSwitcher seatSwitcher;
 
-
     private Transform playerTransform;
     private bool isPlayerNearby = false;
 
     private void Awake()
     {
-        // Tự động căn chỉnh Canvas & ModalCard tràn viền, triệt tiêu hoàn toàn viền thừa / viền đen lồi ra ngoài
+        ResolveReferences();
+        SetupUIStyling();
+        BindButtonEvents();
+        HideModalImmediate();
+    }
+
+    private void Start()
+    {
+        ResolveReferences();
+        HideModalImmediate();
+        BindButtonEvents();
+        FindPlayer();
+    }
+
+    private void OnEnable()
+    {
+        ResolveReferences();
+        BindButtonEvents();
+    }
+
+    /// <summary>
+    /// Tự động tìm kiếm các tham chiếu bị thiếu trong Scene
+    /// </summary>
+    public void ResolveReferences()
+    {
+        // 1. Tìm Panel xác nhận (Panel_ConfirmationModal hoặc Canvas_GameInteraction)
+        if (confirmationModalPanel == null)
+        {
+            GameObject modalObj = GameObject.Find("Panel_ConfirmationModal");
+            if (modalObj != null)
+            {
+                confirmationModalPanel = modalObj;
+            }
+            else
+            {
+                GameObject canvasObj = GameObject.Find("Canvas_GameInteraction");
+                if (canvasObj != null)
+                {
+                    Transform panelTrans = canvasObj.transform.Find("Panel_ConfirmationModal");
+                    if (panelTrans != null)
+                        confirmationModalPanel = panelTrans.gameObject;
+                    else
+                        confirmationModalPanel = canvasObj;
+                }
+            }
+        }
+
+        // 2. Tìm điểm sàn ga tàu (VR_FloorPoint)
+        if (stationEntryPoint == null)
+        {
+            GameObject vrFloor = GameObject.Find("VR_FloorPoint");
+            if (vrFloor != null)
+            {
+                stationEntryPoint = vrFloor.transform;
+            }
+            else
+            {
+                GameObject station = GameObject.Find("WalkZone_Station");
+                if (station != null) stationEntryPoint = station.transform;
+            }
+        }
+
+        // 3. Tìm SeatSwitcher
+        if (seatSwitcher == null)
+        {
+            seatSwitcher = Object.FindAnyObjectByType<SeatSwitcher>();
+        }
+
+        // 4. Tìm XR Origin
+        if (xrOriginObject == null)
+        {
+            FindPlayer();
+        }
+    }
+
+    private void SetupUIStyling()
+    {
         if (confirmationModalPanel != null)
         {
             Canvas canvas = confirmationModalPanel.GetComponentInParent<Canvas>();
-            if (canvas != null && canvas.renderMode == RenderMode.WorldSpace)
+            if (canvas != null)
             {
-                RectTransform canvasRt = canvas.GetComponent<RectTransform>();
-                if (canvasRt != null)
+                // Đảm bảo có GraphicRaycaster để nhận click chuột / VR
+                if (canvas.GetComponent<GraphicRaycaster>() == null)
                 {
-                    canvasRt.sizeDelta = new Vector2(800f, 500f);
+                    canvas.gameObject.AddComponent<GraphicRaycaster>();
                 }
             }
 
-            // Tắt background thừa nếu có trên Panel cha
+            // Tắt hoàn toàn Image nền của Panel cha (xóa bỏ viền panel/khung tối thừa bên ngoài)
             Image panelImg = confirmationModalPanel.GetComponent<Image>();
-            if (panelImg != null && confirmationModalPanel.transform.childCount > 0)
+            if (panelImg != null)
             {
                 panelImg.enabled = false;
             }
 
-            // Ép ModalCard con tràn viền 100%
+            // Giữ ModalCard ở kích thước gọn gàng chuẩn (740x460), căn giữa, KHÔNG kéo tràn viền
             Transform modalCard = confirmationModalPanel.transform.Find("ModalCard");
             if (modalCard != null)
             {
                 RectTransform mcRt = modalCard.GetComponent<RectTransform>();
                 if (mcRt != null)
                 {
-                    mcRt.anchorMin = Vector2.zero;
-                    mcRt.anchorMax = Vector2.one;
-                    mcRt.offsetMin = Vector2.zero;
-                    mcRt.offsetMax = Vector2.zero;
+                    mcRt.anchorMin = new Vector2(0.5f, 0.5f);
+                    mcRt.anchorMax = new Vector2(0.5f, 0.5f);
+                    mcRt.pivot = new Vector2(0.5f, 0.5f);
+                    mcRt.anchoredPosition = Vector2.zero;
+                    mcRt.sizeDelta = new Vector2(740f, 460f);
+                    mcRt.localScale = Vector3.one;
                 }
             }
         }
     }
 
-    private void Start()
+    /// <summary>
+    /// Quét và gắn sự kiện click cho TẤT CẢ nút bấm trong Modal để đảm bảo 100% không bị sót nút
+    /// </summary>
+    public void BindButtonEvents()
     {
-        // Mặc định ẩn bảng xác nhận khi mới vào Scene
-        if (confirmationModalPanel != null)
+        if (confirmationModalPanel == null) return;
+
+        Button[] allButtons = confirmationModalPanel.GetComponentsInChildren<Button>(true);
+        foreach (var btn in allButtons)
         {
-            confirmationModalPanel.SetActive(false);
+            if (btn == null) continue;
+
+            string btnName = btn.gameObject.name.ToLower();
+            string btnText = "";
+            TextMeshProUGUI tmp = btn.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (tmp != null) btnText = tmp.text.ToLower();
+
+            // Phân loại nút dựa theo tên hoặc chữ hiển thị
+            if (btnName.Contains("cancel") || btnName.Contains("close") || btnName.Contains("huy") || btnName.Contains("khong") || btnText.Contains("không") || btnText.Contains("hủy"))
+            {
+                cancelCloseButton = btn;
+                btn.onClick.RemoveListener(CloseModal);
+                btn.onClick.AddListener(CloseModal);
+            }
+            else
+            {
+                // Mặc định các nút còn lại (hoặc chứa start/confirm/co/batdau/play) là nút Bắt đầu
+                if (confirmStartButton == null || btnName.Contains("start") || btnName.Contains("confirm") || btnName.Contains("co") || btnName.Contains("batdau"))
+                {
+                    confirmStartButton = btn;
+                }
+                btn.onClick.RemoveListener(OnConfirmStartGame);
+                btn.onClick.AddListener(OnConfirmStartGame);
+            }
         }
 
+        // Đảm bảo nếu confirmStartButton được gán riêng cũng được gắn listener
         if (confirmStartButton != null)
         {
-            confirmStartButton.onClick.RemoveAllListeners();
+            confirmStartButton.onClick.RemoveListener(OnConfirmStartGame);
             confirmStartButton.onClick.AddListener(OnConfirmStartGame);
         }
 
         if (cancelCloseButton != null)
         {
-            cancelCloseButton.onClick.RemoveAllListeners();
+            cancelCloseButton.onClick.RemoveListener(CloseModal);
             cancelCloseButton.onClick.AddListener(CloseModal);
         }
+    }
 
-        FindPlayer();
+    private void HideModalImmediate()
+    {
+        isPlayerNearby = false;
+        if (confirmationModalPanel != null)
+        {
+            confirmationModalPanel.SetActive(false);
+        }
     }
 
     private void Update()
@@ -104,11 +221,22 @@ public class RollerCoasterInteraction : MonoBehaviour
         if (playerTransform == null)
         {
             FindPlayer();
-            return;
+            if (playerTransform == null) return;
+        }
+
+        if (confirmationModalPanel == null)
+        {
+            ResolveReferences();
+            BindButtonEvents();
         }
 
         // Tính khoảng cách theo mặt phẳng ngang (bỏ qua độ cao Y)
         Vector3 playerPos = playerTransform.position;
+        if (Camera.main != null)
+        {
+            playerPos = Camera.main.transform.position;
+        }
+
         Vector3 zonePos = transform.position;
         playerPos.y = zonePos.y = 0f;
 
@@ -120,10 +248,11 @@ public class RollerCoasterInteraction : MonoBehaviour
             if (!isPlayerNearby)
             {
                 isPlayerNearby = true;
-                Debug.Log("[RollerCoasterInteraction] Người chơi đã đến gần ga tàu lượn -> Bật bảng.");
+                Debug.Log($"[RollerCoasterInteraction] Người chơi đến gần ga tàu lượn ({distance:F2}m) -> Bật bảng.");
                 if (confirmationModalPanel != null)
                 {
                     confirmationModalPanel.SetActive(true);
+                    BindButtonEvents();
                 }
             }
         }
@@ -133,7 +262,7 @@ public class RollerCoasterInteraction : MonoBehaviour
             if (isPlayerNearby)
             {
                 isPlayerNearby = false;
-                Debug.Log("[RollerCoasterInteraction] Người chơi đã rời xa ga tàu lượn -> Tắt bảng.");
+                Debug.Log($"[RollerCoasterInteraction] Người chơi rời xa ga tàu lượn ({distance:F2}m) -> Tắt bảng.");
                 if (confirmationModalPanel != null)
                 {
                     confirmationModalPanel.SetActive(false);
@@ -176,6 +305,7 @@ public class RollerCoasterInteraction : MonoBehaviour
         if (mainCam != null)
         {
             playerTransform = mainCam.transform;
+            if (xrOriginObject == null) xrOriginObject = mainCam.transform.root.gameObject;
         }
     }
 
@@ -185,21 +315,26 @@ public class RollerCoasterInteraction : MonoBehaviour
         {
             confirmationModalPanel.SetActive(false);
         }
+        isPlayerNearby = true;
     }
 
     public void OnConfirmStartGame()
     {
-        Debug.Log("[RollerCoasterInteraction] ĐÃ BẤM BẮT ĐẦU -> Dịch chuyển đến ga tàu lượn.");
+        Debug.Log("<color=#00FF66><b>[RollerCoasterInteraction] ĐÃ NHẬN LỆNH BẮT ĐẦU -> Dịch chuyển người chơi đến ga tàu lượn...</b></color>");
 
         if (confirmationModalPanel != null)
         {
             confirmationModalPanel.SetActive(false);
         }
+        isPlayerNearby = false;
+
+        // Đảm bảo đủ các tham chiếu
+        ResolveReferences();
 
         if (stationEntryPoint == null)
         {
-            Debug.LogError("[RollerCoasterInteraction] Chưa gán stationEntryPoint (VR_FloorPoint)!");
-            return;
+            GameObject vrFloor = GameObject.Find("VR_FloorPoint");
+            if (vrFloor != null) stationEntryPoint = vrFloor.transform;
         }
 
         if (xrOriginObject == null)
@@ -207,13 +342,19 @@ public class RollerCoasterInteraction : MonoBehaviour
             FindPlayer();
         }
 
-        if (xrOriginObject != null)
+        if (seatSwitcher == null)
         {
-            XRFallbackWalkController walkCtrl = xrOriginObject.GetComponent<XRFallbackWalkController>();
-            if (walkCtrl != null) walkCtrl.enabled = false;
+            seatSwitcher = Object.FindAnyObjectByType<SeatSwitcher>();
+        }
 
+        // 1. Dịch chuyển XR Origin đến ga tàu
+        if (xrOriginObject != null && stationEntryPoint != null)
+        {
             CharacterController cc = xrOriginObject.GetComponent<CharacterController>();
             if (cc != null) cc.enabled = false;
+
+            XRFallbackWalkController walkCtrl = xrOriginObject.GetComponent<XRFallbackWalkController>();
+            if (walkCtrl != null) walkCtrl.enabled = false;
 
             xrOriginObject.transform.SetParent(null);
             xrOriginObject.transform.localScale = Vector3.one;
@@ -222,28 +363,67 @@ public class RollerCoasterInteraction : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(spawnPos + Vector3.up * 1.5f, Vector3.down, out hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
             {
-                spawnPos = hit.point + Vector3.up * 0.02f;
+                spawnPos = hit.point + Vector3.up * 0.05f;
             }
             xrOriginObject.transform.SetPositionAndRotation(spawnPos, stationEntryPoint.rotation);
 
+            // Chuyển scale của NPC đại diện người chơi lên 1.22x theo tỷ lệ ga tàu lượn
+            PlayerNPCBodyController playerBody = xrOriginObject.GetComponent<PlayerNPCBodyController>();
+            if (playerBody == null) playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
+            if (playerBody != null)
+            {
+                playerBody.SetStationScale();
+            }
+
+            // Đọc chiều cao mắt từ PlayerNPCBodyController để đảm bảo Camera đứng đúng tầm mắt (Scale 1.22x)
+            float eyeHeight = (playerBody != null) ? playerBody.GetPlayerStandingEyeHeight() : (1.45f * 1.22f);
+
+            Camera mainCam = xrOriginObject.GetComponentInChildren<Camera>();
+            if (mainCam != null)
+            {
+                Transform camParent = mainCam.transform.parent;
+                if (camParent != null && camParent != xrOriginObject.transform)
+                {
+                    camParent.localPosition = new Vector3(0f, eyeHeight, 0f);
+                    mainCam.transform.localPosition = Vector3.zero;
+                }
+                else
+                {
+                    mainCam.transform.localPosition = new Vector3(0f, eyeHeight, 0f);
+                }
+                mainCam.transform.localRotation = Quaternion.identity;
+            }
+
             if (cc != null) cc.enabled = true;
             Physics.SyncTransforms();
+
+            if (walkCtrl != null)
+            {
+                walkCtrl.FindAndCacheWalkZones(true);
+                walkCtrl.enabled = true;
+                walkCtrl.InitCameraAngles();
+            }
+
+            Debug.Log($"<color=#00FF66>[RollerCoasterInteraction] Đã dịch chuyển thành công đến tọa độ: {spawnPos}, Camera Eye Height: {eyeHeight:F2}m</color>");
+        }
+        else
+        {
+            Debug.LogError($"[RollerCoasterInteraction] Không thể dịch chuyển! xrOriginObject={(xrOriginObject != null ? xrOriginObject.name : "NULL")}, stationEntryPoint={(stationEntryPoint != null ? stationEntryPoint.name : "NULL")}");
         }
 
+        // 2. Kích hoạt SeatSwitcher vào chế độ chọn ghế tại sảnh ga
         if (seatSwitcher != null)
         {
             seatSwitcher.ForceBoardingMode();
         }
-        else
-        {
-            SeatSwitcher foundSwitcher = Object.FindAnyObjectByType<SeatSwitcher>();
-            if (foundSwitcher != null) foundSwitcher.ForceBoardingMode();
-        }
+
+        // 3. Mở con trỏ chuột để người chơi tương tác với bảng chọn ghế
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 
     private void OnDrawGizmos()
     {
-        // Vẽ vòng tròn màu vàng bao quanh vùng ga tàu lượn trong cửa sổ Scene
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, activationDistance);
     }
