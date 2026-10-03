@@ -28,9 +28,11 @@ public class PlayerMovement : MonoBehaviour
     public float gravity = -9.81f;
 
     [Header("Giới hạn vùng đi dạo (WalkZone Colliders)")]
+    [Tooltip("Bật để chặn người chơi không đi ra ngoài các BoxCollider (tường vô hình)")]
     public bool restrictToWalkZones = true;
     public BoxCollider[] walkZoneColliders;
-    public float boundaryMargin = 0.35f;
+    [Tooltip("Khoảng cách mép biên an toàn (để 0 để đi qua các Box liền kề mượt mà không bị kẹt)")]
+    public float boundaryMargin = 0f;
 
     [Header("References")]
     [Tooltip("Kéo Main Camera vào đây để nhân vật đi theo hướng nhìn của camera (nếu để trống script tự tìm)")]
@@ -46,7 +48,7 @@ public class PlayerMovement : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
-        FindAndCacheWalkZones();
+        FindAndCacheWalkZones(true);
     }
 
     void Start()
@@ -65,31 +67,51 @@ public class PlayerMovement : MonoBehaviour
         HandleMovement();
     }
 
-    public void FindAndCacheWalkZones()
+    public void FindAndCacheWalkZones(bool forceRefresh = true)
     {
-        if (walkZoneColliders != null && walkZoneColliders.Length > 0) return;
+        if (!forceRefresh && walkZoneColliders != null && walkZoneColliders.Length > 0) return;
 
         List<BoxCollider> foundZones = new List<BoxCollider>();
-        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
+        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
         foreach (var box in allBoxes)
         {
             if (box == null) continue;
             string objName = box.gameObject.name.ToLower();
-            if (objName.Contains("walkzone") || objName.Contains("walk_zone") || objName.Contains("playzone"))
+            bool isUnderZone = (box.transform.parent != null && box.transform.parent.name.Equals("Zone", System.StringComparison.OrdinalIgnoreCase))
+                            || (box.transform.root != null && box.transform.root.name.Equals("Zone", System.StringComparison.OrdinalIgnoreCase));
+
+            bool nameMatches = objName.Contains("walkzone") || objName.Contains("walk_zone") || objName.Contains("playzone") || objName.Contains("ticketzone") || objName.Contains("station") || objName.Contains("zone");
+
+            if (isUnderZone || nameMatches)
             {
-                foundZones.Add(box);
+                if (objName.Contains("solidfloor") || objName.Contains("platform")) continue;
+
+                box.isTrigger = true;
+                if (!foundZones.Contains(box))
+                {
+                    foundZones.Add(box);
+                }
             }
         }
 
-        walkZoneColliders = foundZones.ToArray();
+        if (foundZones.Count > 0)
+        {
+            walkZoneColliders = foundZones.ToArray();
+            string names = string.Join(", ", System.Array.ConvertAll(walkZoneColliders, b => b.gameObject.name));
+            Debug.Log($"<color=cyan>[PlayerMovement] Đã nạp thành công {walkZoneColliders.Length} WalkZones: {names}</color>");
+        }
+        else
+        {
+            Debug.LogError("<color=red>[PlayerMovement] CẢNH BÁO: Không tìm thấy bất kỳ WalkZone nào trong Scene!</color>");
+        }
     }
 
     private void SnapInsideNearestZone()
     {
         if (!restrictToWalkZones || walkZoneColliders == null || walkZoneColliders.Length == 0) return;
 
-        if (!IsPointInsideAnyZone(transform.position, 0.05f))
+        if (!IsPointInsideAnyZone(transform.position, 0f))
         {
             Vector3 clampedPos = GetClampedPositionInsideZones(transform.position);
             controller.enabled = false;
@@ -97,6 +119,8 @@ public class PlayerMovement : MonoBehaviour
             controller.enabled = true;
         }
     }
+
+    private float lastLogTime = 0f;
 
     private void HandleMovement()
     {
@@ -171,13 +195,29 @@ public class PlayerMovement : MonoBehaviour
                 }
                 else
                 {
+                    if (Time.time - lastLogTime > 0.8f)
+                    {
+                        lastLogTime = Time.time;
+                        Debug.LogWarning($"<color=yellow>[SCRIPT BOUNDARY BLOCK] Bị script chặn bước chân tại Pos: {transform.position}, muốn đi tới: {nextPos}. Tổng số Box đang xét: {walkZoneColliders.Length}</color>");
+                    }
                     horizontalMove = Vector3.zero;
                 }
             }
         }
 
+        Vector3 posBefore = transform.position;
         Vector3 finalVelocity = (horizontalMove / Time.deltaTime) + new Vector3(0, currentVelocityY, 0);
         controller.Move(finalVelocity * Time.deltaTime);
+
+        // Phát hiện nếu lệnh di chuyển đã gửi nhưng nhân vật bị vật cản vật lý chặn cứng
+        if (horizontalMove.sqrMagnitude > 0.0001f && Vector3.Distance(new Vector3(posBefore.x, 0, posBefore.z), new Vector3(transform.position.x, 0, transform.position.z)) < 0.0001f)
+        {
+            if (Time.time - lastLogTime > 0.8f)
+            {
+                lastLogTime = Time.time;
+                Debug.LogError($"<color=red>[PHYSICS COLLISION BLOCK] Lệnh di chuyển hợp lệ nhưng CharacterController bị 1 vật cản vật lý (Collider cứng) trong Scene chặn lại tại: {transform.position}</color>");
+            }
+        }
 
         // 5. Cập nhật tham số Speed vào Animator
         if (animator != null)
@@ -186,14 +226,31 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    public bool IsPointInsideAnyZone(Vector3 worldPoint, float margin = 0.2f)
+    private void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        // Bỏ qua mặt sàn khi đang đứng trên sàn
+        if (hit.normal.y > 0.6f) return;
+
+        if (Time.time - lastLogTime > 0.8f)
+        {
+            lastLogTime = Time.time;
+            Debug.LogError($"<color=orange>[VẬT CẢN VẬT LÝ] Người chơi vừa đâm vào: '{hit.gameObject.name}' (Loại Collider: {hit.collider.GetType().Name}, IsTrigger: {hit.collider.isTrigger}, Layer: {LayerMask.LayerToName(hit.gameObject.layer)}) tại tọa độ: {hit.point}</color>", hit.gameObject);
+        }
+    }
+
+    public bool IsPointInsideAnyZone(Vector3 worldPoint, float margin = 0f)
+    {
+        if (walkZoneColliders == null || walkZoneColliders.Length == 0)
+        {
+            FindAndCacheWalkZones(true);
+        }
+
         if (walkZoneColliders == null || walkZoneColliders.Length == 0) return true;
 
         for (int i = 0; i < walkZoneColliders.Length; i++)
         {
             BoxCollider box = walkZoneColliders[i];
-            if (box != null && box.enabled && box.gameObject.activeInHierarchy)
+            if (box != null && box.gameObject.activeInHierarchy)
             {
                 if (IsPointInsideBox(worldPoint, box, margin))
                     return true;
@@ -202,20 +259,36 @@ public class PlayerMovement : MonoBehaviour
         return false;
     }
 
-    public static bool IsPointInsideBox(Vector3 worldPoint, BoxCollider box, float margin = 0.2f)
+    public static bool IsPointInsideBox(Vector3 worldPoint, BoxCollider box, float margin = 0f)
     {
         if (box == null) return false;
 
+        // 1. Kiểm tra bằng Local Transform (tự động xử lý chính xác góc xoay và vị trí Box)
         Vector3 local = box.transform.InverseTransformPoint(worldPoint);
-        Vector3 half = (box.size * 0.5f) - new Vector3(margin, 0, margin);
-        if (half.x < 0.1f) half.x = box.size.x * 0.5f;
-        if (half.z < 0.1f) half.z = box.size.z * 0.5f;
+        float halfX = box.size.x * 0.5f;
+        float halfZ = box.size.z * 0.5f;
 
-        bool inX = Mathf.Abs(local.x - box.center.x) <= half.x;
-        bool inZ = Mathf.Abs(local.z - box.center.z) <= half.z;
-        bool inY = Mathf.Abs(local.y - box.center.y) <= (box.size.y * 0.5f + 3.0f);
+        if (margin > 0f)
+        {
+            halfX = Mathf.Max(0.01f, halfX - margin);
+            halfZ = Mathf.Max(0.01f, halfZ - margin);
+        }
 
-        return inX && inZ && inY;
+        bool inX = Mathf.Abs(local.x - box.center.x) <= halfX;
+        bool inZ = Mathf.Abs(local.z - box.center.z) <= halfZ;
+        // Dung sai chiều cao cực lớn để không bao giờ bị lệch độ cao Y giữa các BoxCollider giao nhau
+        bool inY = Mathf.Abs(local.y - box.center.y) <= (box.size.y * 0.5f + 100.0f);
+
+        if (inX && inZ && inY) return true;
+
+        // 2. Fallback bằng PhysX ClosestPoint trên mặt phẳng ngang X-Z
+        Vector3 centerWorld = box.transform.TransformPoint(box.center);
+        Vector3 testPoint = new Vector3(worldPoint.x, centerWorld.y, worldPoint.z);
+        Vector3 closest = box.ClosestPoint(testPoint);
+        float distSq = (closest.x - testPoint.x) * (closest.x - testPoint.x) + (closest.z - testPoint.z) * (closest.z - testPoint.z);
+        if (distSq <= 0.05f) return true;
+
+        return false;
     }
 
     public Vector3 GetClampedPositionInsideZones(Vector3 worldPoint)

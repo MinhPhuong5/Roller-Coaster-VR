@@ -6,7 +6,8 @@ public class RideController : MonoBehaviour
     [Header("Animation")]
     public string animationClipName = "BluffTitler Animation";
     private Animation anim;
-    private AnimationState state;
+    [HideInInspector] public AnimationState state;
+    public float ClipLength => state != null ? state.length : 90f;
 
     [Header("Station (ga)")]
     [Tooltip("Số giây tính ngược từ cuối clip (Mốc phẳng của nhà ga)")]
@@ -153,11 +154,7 @@ public class RideController : MonoBehaviour
             }
         }
 
-        // 4. Cảm giác mạnh (giơ 2 tay lên) cho các NPC khi lao dốc tốc độ cao (chỉ sau khi đã qua dốc xích kéo > 11.0s)
-        if (currentLoopTime > 11.0f && targetSpeed >= 1.6f && passengerManager != null)
-        {
-            passengerManager.TriggerThrillReaction(1.0f);
-        }
+        // 4. Quản lý chuyển động cảm giác mạnh được xử lý động theo vật lý thực tế trong CoasterPassengerManager.DetectHeightVariationAndThrill()
 
         // 5. Về đích: Đợi chạy đủ toàn bộ thời lượng vòng chạy
         if (traveledAnimationTime >= (clipLength * numberOfLaps))
@@ -303,12 +300,14 @@ public class RideController : MonoBehaviour
 
         if (seatSwitcher != null)
         {
-            seatSwitcher.ForceBoardingMode();
+            seatSwitcher.OpenSelectSeatMenu();
         }
         else
         {
             if (gameOverGroup != null) gameOverGroup.SetActive(false);
             if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
     }
 

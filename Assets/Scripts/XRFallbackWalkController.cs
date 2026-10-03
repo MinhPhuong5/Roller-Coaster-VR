@@ -34,6 +34,7 @@ public class XRFallbackWalkController : MonoBehaviour
     void Awake()
     {
         ConfigureCharacterController();
+        EnsureWalkZonesAreTriggers();
     }
 
     public void ConfigureCharacterController()
@@ -55,9 +56,48 @@ public class XRFallbackWalkController : MonoBehaviour
         }
     }
 
+    private float lastHitLogTime = 0f;
+
+    public static void EnsureWalkZonesAreTriggers()
+    {
+        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int convertedCount = 0;
+        foreach (var b in allBoxes)
+        {
+            if (b == null) continue;
+            string n = b.gameObject.name.ToLower();
+            bool isZone = n.Contains("walk") || n.Contains("zone") || n.Contains("play") || n.Contains("ticket")
+                       || (b.transform.parent != null && b.transform.parent.name.Equals("Zone", System.StringComparison.OrdinalIgnoreCase))
+                       || (b.transform.root != null && b.transform.root.name.Equals("Zone", System.StringComparison.OrdinalIgnoreCase));
+
+            // Không can thiệp vào sàn vật lý của nhà ga
+            if (n.Contains("solidfloor") || n.Contains("platform")) continue;
+
+            if (isZone && !b.isTrigger)
+            {
+                b.isTrigger = true;
+                convertedCount++;
+                Debug.Log($"<color=yellow>[XRFallbackWalkController] Đã tự động chuyển '{b.gameObject.name}' thành IsTrigger=true để không chặn vật lý!</color>");
+            }
+        }
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // Bỏ qua mặt đất/sàn
+        if (hit.normal.y > 0.5f) return;
+
+        if (Time.time - lastHitLogTime > 0.8f)
+        {
+            lastHitLogTime = Time.time;
+            Debug.LogError($"<color=red><b>[VẬT CẢN CHẶN ĐƯỜNG] Bạn đang đâm vào: '{hit.gameObject.name}' (Loại: {hit.collider.GetType().Name}, isTrigger: {hit.collider.isTrigger}, Layer: {LayerMask.LayerToName(hit.gameObject.layer)}) tại tọa độ: {hit.point}</b></color>", hit.gameObject);
+        }
+    }
+
     void OnEnable()
     {
         ConfigureCharacterController();
+        EnsureWalkZonesAreTriggers();
 
         // Tắt MouseLook đi kèm nếu có để tránh xung đột kép góc quay
         MouseLook ml = GetComponentInChildren<MouseLook>();

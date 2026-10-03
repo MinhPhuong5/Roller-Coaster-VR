@@ -109,9 +109,9 @@ public class ParkNPCWanderer : MonoBehaviour
     /// <summary>
     /// Tìm tất cả các BoxCollider thuộc các WalkZone trong Scene
     /// </summary>
-    public void FindAndCacheWalkZones()
+    public void FindAndCacheWalkZones(bool forceRefresh = false)
     {
-        if (walkZoneColliders != null && walkZoneColliders.Length > 0) return;
+        if (!forceRefresh && walkZoneColliders != null && walkZoneColliders.Length > 0) return;
 
         List<BoxCollider> foundZones = new List<BoxCollider>();
         BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
@@ -120,9 +120,16 @@ public class ParkNPCWanderer : MonoBehaviour
         {
             if (box == null) continue;
             string objName = box.gameObject.name.ToLower();
-            if (objName.Contains("walkzone") || objName.Contains("walk_zone") || objName.Contains("playzone"))
+            bool isUnderZone = (box.transform.parent != null && box.transform.parent.name.Equals("Zone", System.StringComparison.OrdinalIgnoreCase))
+                            || (box.transform.root != null && box.transform.root.name.Equals("Zone", System.StringComparison.OrdinalIgnoreCase));
+
+            if (isUnderZone || objName.Contains("walkzone") || objName.Contains("walk_zone") || objName.Contains("playzone") || objName.Contains("ticketzone") || objName.Contains("station"))
             {
-                foundZones.Add(box);
+                box.isTrigger = true;
+                if (!foundZones.Contains(box))
+                {
+                    foundZones.Add(box);
+                }
             }
         }
 
@@ -300,27 +307,23 @@ public class ParkNPCWanderer : MonoBehaviour
             Vector3 candidate;
 
             // Chiến thuật 1: Đi dọc theo chiều dài hành lang của BoxCollider hiện tại (Ưu tiên đi thẳng, không đi chéo)
-            if (attempt < 6 && currentZone != null)
+            if (attempt < 4 && currentZone != null)
             {
                 candidate = GetCorridorAlignedPoint(currentZone, startPos);
             }
-            // Chiến thuật 2: Chọn ngẫu nhiên trong vùng BoxCollider hiện tại
-            else if (currentZone != null)
-            {
-                candidate = GetRandomPointInBox(currentZone, boundaryMargin);
-            }
-            // Chiến thuật 3: Chọn ngẫu nhiên trong bất kỳ BoxCollider nào
+            // Chiến thuật 2: Chọn ngẫu nhiên trong bất kỳ BoxCollider nào (để NPC có thể đi qua lại giữa các khu vực)
             else
             {
-                BoxCollider randomZone = walkZoneColliders[Random.Range(0, walkZoneColliders.Length)];
-                candidate = GetRandomPointInBox(randomZone, boundaryMargin);
+                BoxCollider randomZone = (walkZoneColliders != null && walkZoneColliders.Length > 0)
+                    ? walkZoneColliders[Random.Range(0, walkZoneColliders.Length)]
+                    : currentZone;
+                candidate = GetRandomPointInBox(randomZone != null ? randomZone : currentZone, 0f);
             }
 
             candidate.y = transform.position.y;
 
             // KIỂM TRA ĐƯỜNG ĐI: Chia đoạn thẳng từ startPos -> candidate thành nhiều điểm mẫu
-            // Nếu TẤT CẢ các điểm đều nằm trong BoxCollider (không bị lọt ra bãi cỏ/góc chéo) thì chấp nhận!
-            if (IsPathInsideWalkZones(startPos, candidate, 10, boundaryMargin))
+            if (IsPathInsideWalkZones(startPos, candidate, 8, 0f))
             {
                 return candidate;
             }
@@ -437,21 +440,35 @@ public class ParkNPCWanderer : MonoBehaviour
     /// <summary>
     /// Kiểm tra điểm nằm trong 1 BoxCollider cụ thể (chính xác theo góc xoay của Box)
     /// </summary>
-    public static bool IsPointInsideBox(Vector3 worldPoint, BoxCollider box, float margin = 0.2f)
+    public static bool IsPointInsideBox(Vector3 worldPoint, BoxCollider box, float margin = 0f)
     {
         if (box == null) return false;
 
+        // 1. Kiểm tra bằng Local Transform
         Vector3 local = box.transform.InverseTransformPoint(worldPoint);
-        Vector3 half = (box.size * 0.5f) - new Vector3(margin, 0, margin);
-        if (half.x < 0.1f) half.x = box.size.x * 0.5f;
-        if (half.z < 0.1f) half.z = box.size.z * 0.5f;
+        float halfX = box.size.x * 0.5f;
+        float halfZ = box.size.z * 0.5f;
 
-        bool inX = Mathf.Abs(local.x - box.center.x) <= half.x;
-        bool inZ = Mathf.Abs(local.z - box.center.z) <= half.z;
-        // Dung sai chiều cao Y để vượt qua độ dốc địa hình
-        bool inY = Mathf.Abs(local.y - box.center.y) <= (box.size.y * 0.5f + 3.0f);
+        if (margin > 0f)
+        {
+            halfX = Mathf.Max(0.01f, halfX - margin);
+            halfZ = Mathf.Max(0.01f, halfZ - margin);
+        }
 
-        return inX && inZ && inY;
+        bool inX = Mathf.Abs(local.x - box.center.x) <= halfX;
+        bool inZ = Mathf.Abs(local.z - box.center.z) <= halfZ;
+        bool inY = Mathf.Abs(local.y - box.center.y) <= (box.size.y * 0.5f + 100.0f);
+
+        if (inX && inZ && inY) return true;
+
+        // 2. Fallback bằng PhysX ClosestPoint trên mặt phẳng ngang X-Z
+        Vector3 centerWorld = box.transform.TransformPoint(box.center);
+        Vector3 testPoint = new Vector3(worldPoint.x, centerWorld.y, worldPoint.z);
+        Vector3 closest = box.ClosestPoint(testPoint);
+        float distSq = (closest.x - testPoint.x) * (closest.x - testPoint.x) + (closest.z - testPoint.z) * (closest.z - testPoint.z);
+        if (distSq <= 0.05f) return true;
+
+        return false;
     }
 
     private BoxCollider GetZoneContainingPoint(Vector3 worldPoint)

@@ -311,21 +311,18 @@ public class SeatSwitcher : MonoBehaviour
     }
 
     /// <summary>
-    /// Đưa người chơi ra sàn ga và phục hồi chiều cao đứng chuẩn nhìn thẳng vào bảng chọn ghế
+    /// Đưa người chơi ra sàn ga, sinh sẵn 3 NPC chờ tại ga và mở bảng chọn ghế
     /// </summary>
     public void ForceBoardingMode()
     {
-        if (passengerManager != null)
-        {
-            passengerManager.ReleasePlayerPassenger();
-            passengerManager.ClearOldPassengers();
-        }
-
         if (stationFloorPoint == null)
         {
             GameObject floor = GameObject.Find("VR_FloorPoint");
             if (floor != null) stationFloorPoint = floor.transform;
         }
+
+        // 1. Phục hồi người chơi đứng ở sàn ga
+        RestoreStandingPlayer(stationFloorPoint);
 
         PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
         if (playerBody != null)
@@ -333,16 +330,42 @@ public class SeatSwitcher : MonoBehaviour
             playerBody.SetStationScale();
         }
 
-        RestoreStandingPlayer(stationFloorPoint);
+        // 2. Dọn NPC cũ và sinh 3 NPC MỚI đứng sẵn tại nhà ga (chân chạm sàn 100%, dáng đứng Idle)
+        if (passengerManager != null)
+        {
+            passengerManager.ReleasePlayerPassenger();
+            passengerManager.ClearOldPassengers();
+            passengerManager.SpawnWaitingStationNPCs(stationFloorPoint);
+        }
 
-        // Mở chuột tự do để chọn ghế
+        // 3. Mở chuột tự do để chọn ghế
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Bật bảng chọn ghế, ẩn bảng kết thúc
+        // 4. Bật bảng chọn ghế, ẩn bảng kết thúc
         if (uiPanel != null) uiPanel.SetActive(true);
         if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (startButton != null) startButton.SetActive(false);
+        if (countdownText != null) countdownText.gameObject.SetActive(false);
+
+        if (rideController != null)
+        {
+            rideController.ResetToStation();
+        }
+    }
+
+    /// <summary>
+    /// Mở bảng chọn ghế khi người chơi bấm 'Có / Chơi tiếp' (Chỉ chuyển đổi UI sang chọn ghế, tuyệt đối KHÔNG dịch chuyển vị trí người chơi vì người chơi vốn dĩ đã đứng ở ga)
+    /// </summary>
+    public void OpenSelectSeatMenu()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        if (uiPanel != null) uiPanel.SetActive(true);
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
         if (startButton != null) startButton.SetActive(false);
         if (countdownText != null) countdownText.gameObject.SetActive(false);
 
@@ -447,7 +470,7 @@ public class SeatSwitcher : MonoBehaviour
     }
 
     /// <summary>
-    /// Chờ tàu phanh đỗ hẳn vào bến rồi mới tháo người chơi ra sàn và hiện GameOverGroup
+    /// Chờ tàu phanh đỗ hẳn vào bến rồi mới tháo người chơi ra sàn, sinh NGAY LẬP TỨC 3 NPC mới tại ga và hiện GameOverGroup
     /// </summary>
     private IEnumerator HandleRideEndSequence()
     {
@@ -476,26 +499,40 @@ public class SeatSwitcher : MonoBehaviour
         isRiding = false;
         isHandlingExit = false;
 
-        // 1. Tháo người chơi và đưa toàn bộ 4 NPC ra đứng tại sảnh ga
-        if (passengerManager != null)
+        if (stationFloorPoint == null)
         {
-            passengerManager.UnseatAllPassengersToStation(stationFloorPoint);
+            GameObject floor = GameObject.Find("VR_FloorPoint");
+            if (floor != null) stationFloorPoint = floor.transform;
         }
 
-        // 2. Đưa người chơi ra đứng ở VR_FloorPoint với chiều cao mắt đứng chuẩn
+        // 1. Đưa người chơi ra đứng ở VR_FloorPoint với chiều cao mắt đứng chuẩn (không tách avatar)
         RestoreStandingPlayer(stationFloorPoint);
+
+        PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
+        if (playerBody != null)
+        {
+            playerBody.SetStationScale();
+        }
+
+        // 2. NGAY KHI VỪA CHƠI XONG: Tháo người chơi, dọn 3 hành khách cũ trên tàu và sinh NGAY LẬP TỨC 3 NPC ngẫu nhiên mới đứng chờ tại sảnh ga (chân chạm sàn 100%, dáng đứng Idle)
+        if (passengerManager != null)
+        {
+            passengerManager.ReleasePlayerPassenger();
+            passengerManager.ClearOldPassengers();
+            passengerManager.SpawnWaitingStationNPCs(stationFloorPoint);
+        }
 
         // 3. Mở chuột tự do
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // 4. Hiện bảng hỏi chơi lại
+        // 4. Hiện bảng hỏi chơi lại (GameOverGroup)
         if (uiPanel != null) uiPanel.SetActive(true);
         if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
-            Debug.Log("[SeatSwitcher] Đã dừng hẳn tại ga -> Đưa toàn bộ NPC ra sảnh ga và bật GameOverGroup!");
+            Debug.Log("<color=#00FF88><b>[SeatSwitcher] Vừa chơi xong -> Đã tự động sinh 3 NPC mới đứng tại sảnh ga và hiện bảng GameOverGroup!</b></color>");
         }
     }
 
@@ -513,7 +550,7 @@ public class SeatSwitcher : MonoBehaviour
             }
         }
 
-        // 1. Tháo XR Origin ra khỏi tàu và đưa về vị trí sàn
+        // 1. Tháo XR Origin ra khỏi tàu và đưa về vị trí sàn (Raycast chuẩn chạm mặt sàn)
         if (xrOriginRig != null)
         {
             CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
@@ -526,7 +563,7 @@ public class SeatSwitcher : MonoBehaviour
             {
                 Vector3 spawnPos = targetSpawnPoint.position;
                 RaycastHit hit;
-                if (Physics.Raycast(spawnPos + Vector3.up * 1.5f, Vector3.down, out hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
+                if (Physics.Raycast(spawnPos + Vector3.up * 5.0f, Vector3.down, out hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
                 {
                     spawnPos = hit.point + Vector3.up * 0.02f;
                 }

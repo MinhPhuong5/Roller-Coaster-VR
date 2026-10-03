@@ -41,6 +41,9 @@ public class PlayerNPCBodyController : MonoBehaviour
     private static readonly int IsWalkingParam = Animator.StringToHash("IsWalking");
     private static readonly int SpeedParam = Animator.StringToHash("Speed");
     private static readonly int IsThrilledParam = Animator.StringToHash("IsThrilled");
+    private static readonly int ThrillTypeParam = Animator.StringToHash("ThrillType");
+
+    [HideInInspector] public int currentSeatedThrillType = 0;
 
     /// <summary>
     /// Tìm xương đầu (hoặc mắt) của NPC đại diện người chơi theo chuẩn Humanoid hoặc rig xương cụ thể (bip Head, mixamo, ...)
@@ -460,7 +463,7 @@ public class PlayerNPCBodyController : MonoBehaviour
         Debug.Log($"<color=#00FFCC><b>[PlayerNPCBodyController] Đã gắn NPC đại diện '{chosenPlayerPrefab.name}' vào người chơi với Standing Scale {standingScale.x}!</b></color>");
     }
 
-    public void SetSeatedInCoaster(Transform sitPoint, Vector3 offset, Vector3 scale, Vector3 rotOffset)
+    public void SetSeatedInCoaster(Transform sitPoint, Vector3 offset, Vector3 scale, Vector3 rotOffset, int thrillType = 0)
     {
         if (currentNPCBody == null)
         {
@@ -470,6 +473,7 @@ public class PlayerNPCBodyController : MonoBehaviour
         if (currentNPCBody != null && sitPoint != null)
         {
             isSeated = true;
+            currentSeatedThrillType = thrillType;
 
             // Xóa triệt để các script xung đột như CityPeople, Wanderer, Colliders
             DisableNPCInternalMovement(currentNPCBody);
@@ -493,6 +497,7 @@ public class PlayerNPCBodyController : MonoBehaviour
                 npcAnimator.SetBool(IsSittingParam, true);
                 npcAnimator.SetBool(IsWalkingParam, false);
                 npcAnimator.SetFloat(SpeedParam, 0f);
+                npcAnimator.SetInteger(ThrillTypeParam, currentSeatedThrillType);
                 npcAnimator.SetBool(IsThrilledParam, false);
                 npcAnimator.SetLayerWeight(1, 0f);
                 npcAnimator.Play("Sitting", 0, 0f);
@@ -520,10 +525,16 @@ public class PlayerNPCBodyController : MonoBehaviour
         }
     }
 
-    public void SetThrilled(bool thrilled)
+    public void SetThrilled(bool thrilled, int thrillType = -1)
     {
+        if (thrillType >= 0)
+        {
+            currentSeatedThrillType = thrillType;
+        }
+
         if (npcAnimator != null)
         {
+            npcAnimator.SetInteger(ThrillTypeParam, currentSeatedThrillType);
             npcAnimator.SetBool(IsThrilledParam, thrilled);
             npcAnimator.SetLayerWeight(1, thrilled ? 1f : 0f);
         }

@@ -3493,59 +3493,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 235486587}
   m_CullTransparentMesh: 1
---- !u!1 &236574013
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 236574014}
-  - component: {fileID: 236574015}
-  m_Layer: 0
-  m_Name: UpperPlatform_SolidFloor
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &236574014
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 236574013}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 712289651}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &236574015
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 236574013}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 6.5, y: 0.15, z: 6.5}
-  m_Center: {x: 0.06, y: 0.04, z: 0.12}
 --- !u!1 &238891509
 GameObject:
   m_ObjectHideFlags: 0
@@ -8617,59 +8564,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!1 &548407141
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 548407142}
-  - component: {fileID: 548407143}
-  m_Layer: 0
-  m_Name: LowerPlatform_SolidFloor
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &548407142
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548407141}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 712289651}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &548407143
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548407141}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 6.5, y: 0.15, z: 6.5}
-  m_Center: {x: 0.06, y: 0.01, z: 0.12}
 --- !u!1 &548459904
 GameObject:
   m_ObjectHideFlags: 0
@@ -8838,12 +8732,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -9820,12 +9714,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -10469,12 +10363,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -11876,40 +11770,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2142061212}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &712289650
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 712289651}
-  m_Layer: 0
-  m_Name: Station_SolidFloors
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &712289651
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 712289650}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 236574014}
-  - {fileID: 548407142}
-  - {fileID: 1718795869}
-  m_Father: {fileID: 1575212786}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &712675848
 GameObject:
   m_ObjectHideFlags: 0
@@ -12481,12 +12341,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -13249,12 +13109,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -14632,7 +14492,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0.18000002, y: 0.07297879, z: 0.1235}
-  m_LocalScale: {x: 1.3, y: 1.3, z: 1.3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 443890019}
@@ -15579,12 +15439,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -16349,6 +16209,7 @@ MonoBehaviour:
   chosenPlayerPrefab: {fileID: 0}
   masterAnimatorController: {fileID: 9100000, guid: 0f84e05c298c6604f910ef8c0a4365a6, type: 2}
   currentNPCBody: {fileID: 0}
+  currentSeatedThrillType: 0
 --- !u!1 &950637475
 GameObject:
   m_ObjectHideFlags: 0
@@ -17191,55 +17052,59 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1
+      value: 2.6363637
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.1
+      value: 2.9
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1
+      value: 2.6363637
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 270.28494
+      value: 299.5
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 5.4454093
+      value: 1.403
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -422.54114
+      value: -427.3391
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.8457701
+      value: -0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.0007075635
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.52875435
+      value: 0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.071353704
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 4.259
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 63.765
+      value: 270
       objectReference: {fileID: 0}
     - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: -6.995
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2100208028559941110, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3965764855140889298, guid: f71041fd118fbb34aa9d2dd6a1d96fce, type: 3}
       propertyPath: m_LocalRotation.w
@@ -17605,12 +17470,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -18990,6 +18855,18 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: 171
       objectReference: {fileID: 0}
+    - target: {fileID: 4395343195698557627, guid: c0f3a65a430634949b1158538cc2cbcf, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -9.11
+      objectReference: {fileID: 0}
+    - target: {fileID: 4395343195698557627, guid: c0f3a65a430634949b1158538cc2cbcf, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -26.94
+      objectReference: {fileID: 0}
+    - target: {fileID: 4395343195698557627, guid: c0f3a65a430634949b1158538cc2cbcf, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 5.4
+      objectReference: {fileID: 0}
     - target: {fileID: 4839451112111180986, guid: c0f3a65a430634949b1158538cc2cbcf, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -19493,7 +19370,7 @@ Transform:
   m_GameObject: {fileID: 1077804850}
   serializedVersion: 2
   m_LocalRotation: {x: -0.015530999, y: 0.68742, z: 0.016400581, w: 0.7259088}
-  m_LocalPosition: {x: 3.69, y: 10.34, z: 41.9}
+  m_LocalPosition: {x: -2.24, y: 7.39, z: 35.47}
   m_LocalScale: {x: 150, y: 70, z: 60}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -21051,12 +20928,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -23033,10 +22910,10 @@ MonoBehaviour:
   - {fileID: 1254815310}
   - {fileID: 189162361}
   - {fileID: 570145564}
+  scaleMultiplier: 1.22
   npcScale: {x: 1.22, y: 1.22, z: 1.22}
-  stationStandingScale: {x: 1, y: 1, z: 1}
+  stationStandingScale: {x: 1.22, y: 1.22, z: 1.22}
   hipToSitPointOffset: {x: 0, y: 0, z: 0}
-  defaultNewSitPointOffset: {x: 0, y: -0.85, z: 0.12}
   seatRotationOffset: {x: 0, y: 0, z: 0}
   eyeForwardOffset: 0.08
   eyeHeightOffset: 0.03
@@ -23050,11 +22927,16 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  waitingStationNPCs:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   spawnedPassengerObjects:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  passengerThrillTypes: 00000000000000000000000000000000
 --- !u!1 &1391346790
 GameObject:
   m_ObjectHideFlags: 0
@@ -24661,15 +24543,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       propertyPath: m_LocalScale.x
-      value: 170
+      value: 140
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       propertyPath: m_LocalScale.y
-      value: 170
+      value: 140
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       propertyPath: m_LocalScale.z
-      value: 170
+      value: 140
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       propertyPath: m_LocalPosition.x
@@ -24839,9 +24721,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1766579944}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 712289651}
     - targetCorrespondingSourceObject: {fileID: 3581819037758592400, guid: 1e1e28866f71950409020188ed2d6009, type: 3}
       insertIndex: 3
       addedObject: {fileID: 1860090268}
@@ -25698,59 +25577,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1714302622}
   m_CullTransparentMesh: 1
---- !u!1 &1718795868
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1718795869}
-  - component: {fileID: 1718795870}
-  m_Layer: 0
-  m_Name: Platform_ConnectingRamp
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1718795869
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1718795868}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 712289651}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &1718795870
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1718795868}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 6.5, y: 0.15, z: 2}
-  m_Center: {x: 0.06, y: 0.025, z: 0.12}
 --- !u!1 &1720227581
 GameObject:
   m_ObjectHideFlags: 0
@@ -26631,15 +26457,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1766579941}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.043784305, y: 0.7118101, z: -0.053053908, w: -0.69899553}
-  m_LocalPosition: {x: 0.30655178, y: 0.05075029, z: -0.016923971}
+  m_LocalRotation: {x: 0.01402463, y: -0.70732915, z: 0.022426063, w: 0.7063893}
+  m_LocalPosition: {x: 0.3092305, y: 0.051005144, z: -0.016923524}
   m_LocalScale: {x: 0.008019647, y: 0.0058826474, z: 0.0058877054}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1882274548}
   - {fileID: 858142265}
   m_Father: {fileID: 1575212786}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 2.954, y: -90.059, z: 0.679}
 --- !u!1 &1767925780
 GameObject:
   m_ObjectHideFlags: 0
@@ -29287,12 +29113,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8
@@ -29947,12 +29773,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParkNPCWanderer
   boundaryMode: 0
   walkZoneColliders:
-  - {fileID: 1460105668}
-  - {fileID: 21724886}
-  - {fileID: 305233463}
   - {fileID: 452190571}
-  - {fileID: 2142079731}
+  - {fileID: 21724886}
+  - {fileID: 1460105668}
   - {fileID: 1738291811}
+  - {fileID: 2142079731}
+  - {fileID: 305233463}
   boundaryMargin: 0.35
   centerPoint: {fileID: 0}
   maxRadius: 8

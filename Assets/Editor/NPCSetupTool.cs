@@ -41,15 +41,31 @@ public static class NPCSetupTool
         EditorUtility.SetDirty(upperBodyMask);
         Debug.Log("[NPCSetupTool] Đã cấu hình UpperBody_Mask CHỈ tác động 2 cánh tay (Body & Head = FALSE) tại: " + MaskPath);
 
-        // 2. Tìm các Animation Clips chuẩn
+        // 2. Cấu hình LoopTime = true và ép Unity Reimport các FBX sang chuẩn Humanoid
+        EnsureClipLooping("Assets/3D Model/NPC/X Bot@Sitting Idle.fbx");
+        EnsureClipLooping("Assets/3D Model/NPC/Waving.fbx");
+        EnsureClipLooping("Assets/3D Model/NPC/Braced Hang Shimmy.fbx");
+        EnsureClipLooping("Assets/3D Model/NPC/X Bot@Hanging Idle.fbx");
+        EnsureClipLooping("Assets/3D Model/NPC/X Bot@Hanging Idle (1).fbx");
+        EnsureClipLooping("Assets/3D Model/NPC/X Bot@Falling.fbx");
+
+        // Nạp các Animation Clips chuẩn Humanoid
         AnimationClip walkClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/locom_m_basicWalk_30f.fbx");
         AnimationClip idleClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/DenysAlmaral/CityPeople/Animations/idle_m_1_200f.fbx");
         AnimationClip sitClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Sitting Idle.fbx");
         
-        // Hoạt ảnh mạo hiểm / giơ 2 tay lên cao (Hands Up / Hanging Idle / Falling) - KHÔNG DÙNG DANCE HYPE
-        AnimationClip thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle.fbx");
-        if (thrillClip == null) thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Falling.fbx");
-        if (thrillClip == null) thrillClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle (1).fbx");
+        // 4 Hoạt ảnh mạo hiểm / cảm giác mạnh khác nhau khi tàu lao dốc / tốc độ cao
+        AnimationClip hangingClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle.fbx");
+        if (hangingClip == null) hangingClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Hanging Idle (1).fbx");
+
+        AnimationClip wavingClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/Waving.fbx");
+        AnimationClip bracedClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/Braced Hang Shimmy.fbx");
+        AnimationClip fallingClip = LoadFirstClipFromFBX("Assets/3D Model/NPC/X Bot@Falling.fbx");
+
+        // Fallback an toàn nếu thiếu file
+        if (wavingClip == null) wavingClip = hangingClip;
+        if (bracedClip == null) bracedClip = hangingClip;
+        if (fallingClip == null) fallingClip = hangingClip;
 
         // 3. Tạo hoặc nạp AnimatorController
         AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(AnimatorPath);
@@ -59,6 +75,7 @@ public static class NPCSetupTool
         controller.AddParameter("IsWalking", AnimatorControllerParameterType.Bool);
         controller.AddParameter("IsSitting", AnimatorControllerParameterType.Bool);
         controller.AddParameter("IsThrilled", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("ThrillType", AnimatorControllerParameterType.Int);
 
         // ==========================================
         // BASE LAYER: Di chuyển ở công viên & Dáng ngồi trong tàu
@@ -99,7 +116,8 @@ public static class NPCSetupTool
         sitToIdle.duration = 0.25f;
 
         // ==========================================
-        // UPPER BODY LAYER: Động tác chới với / Giơ tay linh hoạt khi tàu lao dốc
+        // UPPER BODY LAYER: Động tác mạo hiểm phong phú đa dạng cho từng NPC khi tàu lao dốc
+        // (Chỉ tác động 2 cánh tay qua UpperBody_Mask, ngồi yên trên ghế khi đoạn bình thường)
         // ==========================================
         AnimatorControllerLayer upperLayer = new AnimatorControllerLayer
         {
@@ -114,30 +132,80 @@ public static class NPCSetupTool
         AssetDatabase.AddObjectToAsset(upperLayer.stateMachine, AnimatorPath);
 
         // State mặc định: Empty (motion = sitClip). Giữ tư thế tay ngồi tự nhiên và triệt tiêu hoàn toàn T-Pose khi chưa kích hoạt IsThrilled
-        AnimatorState emptyState = upperLayer.stateMachine.AddState("Empty", new Vector3(250, 100, 0));
+        AnimatorState emptyState = upperLayer.stateMachine.AddState("Empty", new Vector3(300, 100, 0));
         emptyState.motion = sitClip;
         emptyState.writeDefaultValues = true;
 
-        // State phản ứng lao dốc / tốc độ cao (Vẫy tay & Giơ tay sống động)
-        AnimatorState thrillReactionState = upperLayer.stateMachine.AddState("Thrill_Reaction", new Vector3(250, 220, 0));
-        thrillReactionState.motion = thrillClip;
+        // 1. Thrill Type 0: Giơ 2 tay lên cao (High Hands Up)
+        AnimatorState stateHandsUp = upperLayer.stateMachine.AddState("Thrill_HandsUp", new Vector3(80, 240, 0));
+        stateHandsUp.motion = hangingClip;
+        stateHandsUp.writeDefaultValues = true;
 
-        var toReact = emptyState.AddTransition(thrillReactionState);
-        toReact.AddCondition(AnimatorConditionMode.If, 0, "IsThrilled");
-        toReact.hasExitTime = false;
-        toReact.duration = 0.2f;
+        var toHandsUp = emptyState.AddTransition(stateHandsUp);
+        toHandsUp.AddCondition(AnimatorConditionMode.If, 0, "IsThrilled");
+        toHandsUp.AddCondition(AnimatorConditionMode.Equals, 0, "ThrillType");
+        toHandsUp.hasExitTime = false;
+        toHandsUp.duration = 0.2f;
 
-        var toEmpty = thrillReactionState.AddTransition(emptyState);
-        toEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsThrilled");
-        toEmpty.hasExitTime = false;
-        toEmpty.duration = 0.3f;
+        var handsUpToEmpty = stateHandsUp.AddTransition(emptyState);
+        handsUpToEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsThrilled");
+        handsUpToEmpty.hasExitTime = false;
+        handsUpToEmpty.duration = 0.25f;
+
+        // 2. Thrill Type 1: Vẫy tay phấn khích (Waving)
+        AnimatorState stateWaving = upperLayer.stateMachine.AddState("Thrill_Waving", new Vector3(240, 240, 0));
+        stateWaving.motion = wavingClip;
+        stateWaving.writeDefaultValues = true;
+
+        var toWaving = emptyState.AddTransition(stateWaving);
+        toWaving.AddCondition(AnimatorConditionMode.If, 0, "IsThrilled");
+        toWaving.AddCondition(AnimatorConditionMode.Equals, 1, "ThrillType");
+        toWaving.hasExitTime = false;
+        toWaving.duration = 0.2f;
+
+        var wavingToEmpty = stateWaving.AddTransition(emptyState);
+        wavingToEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsThrilled");
+        wavingToEmpty.hasExitTime = false;
+        wavingToEmpty.duration = 0.25f;
+
+        // 3. Thrill Type 2: Bám chặt rung lắc / Co tay mạo hiểm (Braced Hang Shimmy)
+        AnimatorState stateBraced = upperLayer.stateMachine.AddState("Thrill_BracedHang", new Vector3(400, 240, 0));
+        stateBraced.motion = bracedClip;
+        stateBraced.writeDefaultValues = true;
+
+        var toBraced = emptyState.AddTransition(stateBraced);
+        toBraced.AddCondition(AnimatorConditionMode.If, 0, "IsThrilled");
+        toBraced.AddCondition(AnimatorConditionMode.Equals, 2, "ThrillType");
+        toBraced.hasExitTime = false;
+        toBraced.duration = 0.2f;
+
+        var bracedToEmpty = stateBraced.AddTransition(emptyState);
+        bracedToEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsThrilled");
+        bracedToEmpty.hasExitTime = false;
+        bracedToEmpty.duration = 0.25f;
+
+        // 4. Thrill Type 3: Chới với rơi tự do (Falling Arms)
+        AnimatorState stateFalling = upperLayer.stateMachine.AddState("Thrill_Falling", new Vector3(560, 240, 0));
+        stateFalling.motion = fallingClip;
+        stateFalling.writeDefaultValues = true;
+
+        var toFalling = emptyState.AddTransition(stateFalling);
+        toFalling.AddCondition(AnimatorConditionMode.If, 0, "IsThrilled");
+        toFalling.AddCondition(AnimatorConditionMode.Equals, 3, "ThrillType");
+        toFalling.hasExitTime = false;
+        toFalling.duration = 0.2f;
+
+        var fallingToEmpty = stateFalling.AddTransition(emptyState);
+        fallingToEmpty.AddCondition(AnimatorConditionMode.IfNot, 0, "IsThrilled");
+        fallingToEmpty.hasExitTime = false;
+        fallingToEmpty.duration = 0.25f;
 
         controller.AddLayer(upperLayer);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("[NPCSetupTool] Đã tạo thành công AnimatorController tích hợp UpperBody Mask tại: " + AnimatorPath);
+        Debug.Log("[NPCSetupTool] Đã tạo thành công AnimatorController tích hợp 4 kiểu Thrill Reactions tại: " + AnimatorPath);
 
         // 4. Tự động gán vào các NPC đang có trong Scene
         ApplyToSceneNPCs(controller);
@@ -150,6 +218,9 @@ public static class NPCSetupTool
 
         // 7. Thiết lập sàn nhà ga vững chắc chống rơi sàn
         EnsureStationSolidColliders();
+
+        // 8. Đảm bảo toàn bộ WalkZone là Trigger để người chơi đi lại tự do không bị chặn
+        EnsureAllWalkZonesAreTriggers();
     }
 
     public static void EnsurePlayerBodyLayerRegistered()
@@ -205,6 +276,35 @@ public static class NPCSetupTool
 
         EditorUtility.SetDirty(bodyCtrl);
         Debug.Log("<color=#00FFCC><b>[NPCSetupTool] Đã thiết lập xong PlayerNPCBodyController cho người chơi!</b></color>");
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Ensure All WalkZones Are Triggers (Fix Blocked Walking)")]
+    public static void EnsureAllWalkZonesAreTriggers()
+    {
+        BoxCollider[] allBoxes = Object.FindObjectsByType<BoxCollider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int fixedCount = 0;
+        foreach (var b in allBoxes)
+        {
+            if (b == null) continue;
+            string n = b.gameObject.name.ToLower();
+            bool isZone = n.Contains("walkzone") || n.Contains("walk_zone") || n.Contains("playzone") || n.Contains("ticketzone") || (b.transform.parent != null && b.transform.parent.name.Equals("Zone", System.StringComparison.OrdinalIgnoreCase));
+
+            // Không can thiệp vào sàn vật lý của nhà ga
+            if (n.Contains("solidfloor") || n.Contains("platform")) continue;
+
+            if (isZone)
+            {
+                if (!b.isTrigger)
+                {
+                    b.isTrigger = true;
+                    EditorUtility.SetDirty(b);
+                    fixedCount++;
+                }
+            }
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log($"<color=#00FF88><b>[NPCSetupTool] Đã chuyển {fixedCount} BoxCollider của WalkZone sang 'Is Trigger = TRUE' (Không còn bị tường tàng hình cản đường)!</b></color>");
     }
 
     [MenuItem("Tools/NPC System/1-Click Ensure Station Solid Floor Colliders")]
@@ -342,6 +442,35 @@ public static class NPCSetupTool
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
         Debug.Log("<color=#00FF66><b>[NPCSetupTool] Đã cấu hình xong hệ thống hành khách trên tàu!</b></color>");
+    }
+
+    private static void EnsureClipLooping(string fbxPath)
+    {
+        ModelImporter importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+        if (importer != null)
+        {
+            importer.animationType = ModelImporterAnimationType.Human;
+            ModelImporterClipAnimation[] clips = importer.defaultClipAnimations;
+            if (clips == null || clips.Length == 0)
+            {
+                clips = importer.clipAnimations;
+            }
+            if (clips != null && clips.Length > 0)
+            {
+                for (int i = 0; i < clips.Length; i++)
+                {
+                    clips[i].loopTime = true;
+                    clips[i].loopPose = true;
+                    clips[i].wrapMode = WrapMode.Loop;
+                }
+                importer.clipAnimations = clips;
+                importer.SaveAndReimport();
+            }
+            else
+            {
+                importer.SaveAndReimport();
+            }
+        }
     }
 
     private static AnimationClip LoadFirstClipFromFBX(string path)
