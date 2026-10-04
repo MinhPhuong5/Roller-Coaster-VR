@@ -143,20 +143,9 @@ public class RideController : MonoBehaviour
         // 2. Cập nhật âm thanh ray & xích kéo
         UpdateLapAudio(targetSpeed, currentLoopTime, currentLapIndex, isFinalLap);
 
-        // 3. Đóng rào sớm vòng cuối
-        float startOfFinalLap = clipLength * (numberOfLaps - 1);
-        if (isFinalLap && !hasTriggeredEarlyGateClose && traveledAnimationTime >= (startOfFinalLap + 10.0f))
-        {
-            hasTriggeredEarlyGateClose = true;
-            if (seatSwitcher != null)
-            {
-                seatSwitcher.TriggerEarlyGateClose();
-            }
-        }
+        // 3. Quản lý chuyển động cảm giác mạnh được xử lý động theo vật lý thực tế trong CoasterPassengerManager.DetectHeightVariationAndThrill()
 
-        // 4. Quản lý chuyển động cảm giác mạnh được xử lý động theo vật lý thực tế trong CoasterPassengerManager.DetectHeightVariationAndThrill()
-
-        // 5. Về đích: Đợi chạy đủ toàn bộ thời lượng vòng chạy
+        // 4. Về đích: Đợi chạy đủ toàn bộ thời lượng vòng chạy -> Dừng tàu tại ga và SeatSwitcher sẽ đóng rào an toàn
         if (traveledAnimationTime >= (clipLength * numberOfLaps))
         {
             FinishRide();
@@ -272,7 +261,14 @@ public class RideController : MonoBehaviour
         state.speed = 0f;
         anim.Sample();
 
-        if (passengerManager != null) passengerManager.SetAllPassengersThrilled(false);
+        if (passengerManager != null)
+        {
+            passengerManager.SetAllPassengersThrilled(false);
+            if (passengerManager.voiceManager != null)
+            {
+                passengerManager.voiceManager.TriggerStationArrivalReliefAll();
+            }
+        }
         if (trackWindAudio != null) trackWindAudio.Stop();
         if (clankAudio != null) clankAudio.Stop();
 

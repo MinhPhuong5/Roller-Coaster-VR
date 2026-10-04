@@ -93,6 +93,8 @@ public class SeatSwitcher : MonoBehaviour
             if (floor != null) stationFloorPoint = floor.transform;
         }
 
+        GetOrCreateParkReturnPoint();
+
         if (rideController == null)
         {
             rideController = Object.FindAnyObjectByType<RideController>();
@@ -377,23 +379,56 @@ public class SeatSwitcher : MonoBehaviour
 
     public void EnterSeatedMode() { }
 
-    public void TriggerEarlyGateClose()
+    public void OpenAllGates()
     {
-        if (!isGateAlreadyClosed)
+        if (stationGates != null && stationGates.Length > 0)
         {
-            isGateAlreadyClosed = true;
-            if (stationGates != null && stationGates.Length > 0)
+            foreach (var gate in stationGates)
             {
-                foreach (var gate in stationGates)
-                {
-                    if (gate != null) gate.CloseGate();
-                }
-            }
-            else if (stationGate != null)
-            {
-                stationGate.CloseGate();
+                if (gate != null) gate.OpenGate();
             }
         }
+        else if (stationGate != null)
+        {
+            stationGate.OpenGate();
+        }
+    }
+
+    public void CloseAllGates()
+    {
+        if (stationGates != null && stationGates.Length > 0)
+        {
+            foreach (var gate in stationGates)
+            {
+                if (gate != null) gate.CloseGate();
+            }
+        }
+        else if (stationGate != null)
+        {
+            stationGate.CloseGate();
+        }
+    }
+
+    public bool AreAllGatesClosed()
+    {
+        if (stationGates != null && stationGates.Length > 0)
+        {
+            foreach (var gate in stationGates)
+            {
+                if (gate != null && !gate.IsFullyClosed()) return false;
+            }
+            return true;
+        }
+        else if (stationGate != null)
+        {
+            return stationGate.IsFullyClosed();
+        }
+        return true;
+    }
+
+    public void TriggerEarlyGateClose()
+    {
+        // Rào chắn ga nay chỉ đóng sau khi tàu đã về bến đỗ dừng hẳn an toàn
     }
 
     public void ExitCar()
@@ -408,18 +443,8 @@ public class SeatSwitcher : MonoBehaviour
     {
         isGateAlreadyClosed = false;
 
-        // Mở toàn bộ các thanh chắn trong ga
-        if (stationGates != null && stationGates.Length > 0)
-        {
-            foreach (var gate in stationGates)
-            {
-                if (gate != null) gate.OpenGate();
-            }
-        }
-        else if (stationGate != null)
-        {
-            stationGate.OpenGate();
-        }
+        // Mở toàn bộ các thanh chắn trong ga để tàu xuất phát
+        OpenAllGates();
 
         bool hasCountdown = useCountdownText || useCountdownAudio;
 
@@ -470,26 +495,36 @@ public class SeatSwitcher : MonoBehaviour
     }
 
     /// <summary>
-    /// Chờ tàu phanh đỗ hẳn vào bến rồi mới tháo người chơi ra sàn, sinh NGAY LẬP TỨC 3 NPC mới tại ga và hiện GameOverGroup
+    /// Chờ tàu phanh đỗ hẳn vào bến an toàn -> Đóng thanh chắn hoàn toàn + Thở phào xong -> Mới cho phép thoát ra ngoài
     /// </summary>
     private IEnumerator HandleRideEndSequence()
     {
         isHandlingExit = true;
 
-        // Chờ đủ thời gian để tàu phanh từ từ về bến dừng hẳn
-        yield return new WaitForSeconds(3.5f);
+        // 1. Chờ tàu phanh từ từ về bến dừng hẳn an toàn (0.8s)
+        yield return new WaitForSeconds(0.8f);
 
-        if (stationGates != null && stationGates.Length > 0)
+        // 2. TÀU ĐÃ VỀ GA VÀ DỪNG HẲN AN TOÀN -> Bắt đầu đóng thanh chắn ga
+        CloseAllGates();
+
+        // 3. ĐỒNG THỜI trong lúc thanh chắn đang hạ đóng: NPC và người chơi thở phào nhẹ nhõm (Phùuu..., Haizzz...)
+        CoasterPassengerVoiceManager voiceMgr = (passengerManager != null) ? passengerManager.voiceManager : Object.FindAnyObjectByType<CoasterPassengerVoiceManager>();
+        
+        // Chờ 0.35s để các coroutine phát âm thanh thở phào bắt đầu kích hoạt
+        yield return new WaitForSeconds(0.35f);
+
+        // 4. CHỜ ĐỒNG THỜI:
+        //    a) Thanh chắn phải hạ xuống ĐÓNG HOÀN TOÀN 100% (AreAllGatesClosed() == true)
+        //    b) Cả 4 hành khách phải phát xong trọn vẹn 100% tiếng thở phào nhẹ nhõm (voiceMgr.IsReliefActive() == false)
+        float waitTimer = 0f;
+        while ((!AreAllGatesClosed() || (voiceMgr != null && voiceMgr.IsReliefActive())) && waitTimer < 8.0f)
         {
-            foreach (var gate in stationGates)
-            {
-                if (gate != null && gate.gateAudioSource != null) gate.gateAudioSource.Stop();
-            }
+            waitTimer += 0.1f;
+            yield return new WaitForSeconds(0.1f);
         }
-        else if (stationGate != null && stationGate.gateAudioSource != null)
-        {
-            stationGate.gateAudioSource.Stop();
-        }
+
+        // 5. Khoảng nghỉ tự nhiên sau khi thanh chắn ĐÃ ĐÓNG XONG 100% VÀ thở phào xong (0.5s) trước khi đưa người chơi ra sàn ga
+        yield return new WaitForSeconds(0.5f);
 
         if (countdownAudio != null && countdownAudio.isPlaying)
         {
@@ -505,7 +540,7 @@ public class SeatSwitcher : MonoBehaviour
             if (floor != null) stationFloorPoint = floor.transform;
         }
 
-        // 1. Đưa người chơi ra đứng ở VR_FloorPoint với chiều cao mắt đứng chuẩn (không tách avatar)
+        // 6. Đưa người chơi ra đứng ở VR_FloorPoint với chiều cao mắt đứng chuẩn (không tách avatar)
         RestoreStandingPlayer(stationFloorPoint);
 
         PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
@@ -514,7 +549,7 @@ public class SeatSwitcher : MonoBehaviour
             playerBody.SetStationScale();
         }
 
-        // 2. NGAY KHI VỪA CHƠI XONG: Tháo người chơi, dọn 3 hành khách cũ trên tàu và sinh NGAY LẬP TỨC 3 NPC ngẫu nhiên mới đứng chờ tại sảnh ga (chân chạm sàn 100%, dáng đứng Idle)
+        // 7. NGAY KHI VỪA CHƠI XONG: Tháo người chơi, dọn 3 hành khách cũ trên tàu và sinh NGAY LẬP TỨC 3 NPC ngẫu nhiên mới đứng chờ tại sảnh ga (chân chạm sàn 100%, dáng đứng Idle)
         if (passengerManager != null)
         {
             passengerManager.ReleasePlayerPassenger();
@@ -522,18 +557,104 @@ public class SeatSwitcher : MonoBehaviour
             passengerManager.SpawnWaitingStationNPCs(stationFloorPoint);
         }
 
-        // 3. Mở chuột tự do
+        // 8. Mở chuột tự do
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // 4. Hiện bảng hỏi chơi lại (GameOverGroup)
+        // 9. Hiện bảng hỏi chơi lại (GameOverGroup)
         if (uiPanel != null) uiPanel.SetActive(true);
         if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
-            Debug.Log("<color=#00FF88><b>[SeatSwitcher] Vừa chơi xong -> Đã tự động sinh 3 NPC mới đứng tại sảnh ga và hiện bảng GameOverGroup!</b></color>");
+            Debug.Log("<color=#00FF88><b>[SeatSwitcher] Thanh chắn đã đóng 100% + thở phào xong -> Đã đưa người chơi ra sàn ga và hiện GameOverGroup!</b></color>");
         }
+    }
+
+    /// <summary>
+    /// Tìm điểm mặt sàn thật của công viên / nhà ga (loại bỏ ray tàu, thanh chắn, kiosk UI, trần nhà)
+    /// </summary>
+    public static Vector3 FindSolidGroundPosition(Vector3 referencePos)
+    {
+        // Bắn tia từ độ cao vừa phải (+1.2m trên đầu) xuống dưới 12m để tìm mặt sàn thật
+        RaycastHit[] hits = Physics.RaycastAll(referencePos + Vector3.up * 1.2f, Vector3.down, 15.0f, ~0, QueryTriggerInteraction.Ignore);
+        
+        Vector3 bestGroundPoint = referencePos;
+        bool foundGround = false;
+
+        foreach (var h in hits)
+        {
+            if (h.collider == null) continue;
+            string colName = h.collider.gameObject.name.ToLower();
+            string rootName = h.collider.transform.root.name.ToLower();
+
+            // Bỏ qua đường ray tàu lượn, toa tàu, thanh chắn, UI, camera, người chơi
+            if (colName.Contains("track") || colName.Contains("rail") || colName.Contains("coaster") 
+                || colName.Contains("kiosk") || colName.Contains("cart") || colName.Contains("canvas")
+                || colName.Contains("bar") || colName.Contains("gate") || rootName.Contains("coasterrig")
+                || colName.Contains("player") || colName.Contains("origin"))
+            {
+                continue;
+            }
+
+            // Lấy điểm sàn hợp lệ
+            if (!foundGround || h.point.y < bestGroundPoint.y)
+            {
+                bestGroundPoint = h.point + Vector3.up * 0.02f;
+                foundGround = true;
+            }
+        }
+
+        if (foundGround) return bestGroundPoint;
+
+        // Fallback: Nếu Raycast thông thường trúng
+        if (Physics.Raycast(referencePos + Vector3.up * 0.8f, Vector3.down, out RaycastHit singleHit, 10.0f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            return singleHit.point + Vector3.up * 0.02f;
+        }
+
+        return referencePos;
+    }
+
+    public Transform GetOrCreateParkReturnPoint()
+    {
+        if (parkReturnPoint != null) return parkReturnPoint;
+
+        // 1. Tìm theo tên CoasterParkReturnPoint
+        GameObject p = GameObject.Find("CoasterParkReturnPoint");
+        if (p != null)
+        {
+            parkReturnPoint = p.transform;
+            return parkReturnPoint;
+        }
+
+        // 2. Tìm theo Kiosk 3D (RollerCoasterInteraction / Canvas_GameInteraction)
+        RollerCoasterInteraction interaction = Object.FindAnyObjectByType<RollerCoasterInteraction>();
+        if (interaction != null)
+        {
+            GameObject returnObj = new GameObject("CoasterParkReturnPoint");
+            // Đặt điểm quay về đứng trên mặt đường dạo phía trước Kiosk 2.5m
+            Vector3 pos = interaction.transform.position - interaction.transform.forward * 2.5f;
+            pos = FindSolidGroundPosition(pos);
+            returnObj.transform.position = pos;
+            returnObj.transform.rotation = interaction.transform.rotation;
+            parkReturnPoint = returnObj.transform;
+            return parkReturnPoint;
+        }
+
+        GameObject kioskObj = GameObject.Find("Canvas_GameInteraction");
+        if (kioskObj != null)
+        {
+            GameObject returnObj = new GameObject("CoasterParkReturnPoint");
+            Vector3 pos = kioskObj.transform.position - kioskObj.transform.forward * 2.5f;
+            pos = FindSolidGroundPosition(pos);
+            returnObj.transform.position = pos;
+            returnObj.transform.rotation = kioskObj.transform.rotation;
+            parkReturnPoint = returnObj.transform;
+            return parkReturnPoint;
+        }
+
+        return null;
     }
 
     private void RestoreStandingPlayer(Transform targetSpawnPoint)
@@ -542,15 +663,19 @@ public class SeatSwitcher : MonoBehaviour
 
         if (targetSpawnPoint == null)
         {
-            if (stationFloorPoint != null) targetSpawnPoint = stationFloorPoint;
-            else
+            targetSpawnPoint = GetOrCreateParkReturnPoint();
+            if (targetSpawnPoint == null)
             {
-                GameObject floor = GameObject.Find("VR_FloorPoint");
-                if (floor != null) targetSpawnPoint = floor.transform;
+                if (stationFloorPoint != null) targetSpawnPoint = stationFloorPoint;
+                else
+                {
+                    GameObject floor = GameObject.Find("VR_FloorPoint");
+                    if (floor != null) targetSpawnPoint = floor.transform;
+                }
             }
         }
 
-        // 1. Tháo XR Origin ra khỏi tàu và đưa về vị trí sàn (Raycast chuẩn chạm mặt sàn)
+        // 1. Tháo XR Origin ra khỏi tàu và đưa về vị trí sàn (Raycast chuẩn chạm mặt sàn công viên)
         if (xrOriginRig != null)
         {
             CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
@@ -561,16 +686,15 @@ public class SeatSwitcher : MonoBehaviour
 
             if (targetSpawnPoint != null)
             {
-                Vector3 spawnPos = targetSpawnPoint.position;
-                RaycastHit hit;
-                if (Physics.Raycast(spawnPos + Vector3.up * 5.0f, Vector3.down, out hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
-                {
-                    spawnPos = hit.point + Vector3.up * 0.02f;
-                }
+                Vector3 spawnPos = FindSolidGroundPosition(targetSpawnPoint.position);
                 xrOriginRig.transform.SetPositionAndRotation(spawnPos, targetSpawnPoint.rotation);
             }
 
-            if (cc != null) cc.enabled = true;
+            if (cc != null)
+            {
+                cc.enabled = true;
+                cc.Move(Vector3.down * 0.05f); // Ép CharacterController chạm đất ngay lập tức
+            }
             Physics.SyncTransforms();
         }
 
@@ -650,7 +774,8 @@ public class SeatSwitcher : MonoBehaviour
             playerBody.SetParkScale();
         }
 
-        RestoreStandingPlayer(parkReturnPoint);
+        Transform returnPoint = GetOrCreateParkReturnPoint();
+        RestoreStandingPlayer(returnPoint);
 
         HideUI();
         Cursor.lockState = CursorLockMode.None;

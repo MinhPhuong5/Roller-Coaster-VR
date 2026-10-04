@@ -686,5 +686,82 @@ public static class NPCSetupTool
 
         Debug.Log($"[NPCSetupTool] Đã tự động gắn Animator và ParkNPCWanderer cho {count} nhân vật trong 'NPC'!");
     }
+
+    [MenuItem("Tools/NPC System/1-Click Setup Passenger Voice & Screams (3D Audio)")]
+    public static void SetupPassengerVoiceSystem()
+    {
+        // 1. Cấu hình AudioImporter cho toàn bộ file âm thanh trong Assets/Sound/NPC
+        string[] guids = AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets/Sound/NPC" });
+        int reimported = 0;
+        foreach (var guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            AudioImporter importer = AssetImporter.GetAtPath(path) as AudioImporter;
+            if (importer != null)
+            {
+                bool dirty = false;
+                if (!importer.forceToMono)
+                {
+                    importer.forceToMono = true; // Ép về Mono để Spatial Audio 3D hoạt động chính xác 100% trong VR
+                    dirty = true;
+                }
+
+                AudioImporterSampleSettings settings = importer.defaultSampleSettings;
+                if (settings.loadType != AudioClipLoadType.DecompressOnLoad)
+                {
+                    settings.loadType = AudioClipLoadType.DecompressOnLoad; // Tải sẵn vào RAM để phát ngay lập tức khi lao dốc không bị delay
+                    importer.defaultSampleSettings = settings;
+                    dirty = true;
+                }
+
+                if (dirty)
+                {
+                    importer.SaveAndReimport();
+                    reimported++;
+                }
+            }
+        }
+        if (reimported > 0)
+        {
+            Debug.Log($"<color=#00FF88>[NPCSetupTool] Đã tự động tối ưu hóa 3D Mono & DecompressOnLoad cho {reimported} file âm thanh tiếng hét!</color>");
+        }
+
+        // 2. Tìm hoặc gắn CoasterPassengerVoiceManager lên tàu lượn (CoasterRig / CoasterPassengerManager)
+        CoasterPassengerManager passengerMgr = Object.FindAnyObjectByType<CoasterPassengerManager>();
+        if (passengerMgr == null)
+        {
+            GameObject coasterRig = GameObject.Find("CoasterRig");
+            if (coasterRig != null)
+            {
+                passengerMgr = coasterRig.GetComponent<CoasterPassengerManager>();
+                if (passengerMgr == null) passengerMgr = coasterRig.AddComponent<CoasterPassengerManager>();
+            }
+        }
+
+        if (passengerMgr == null)
+        {
+            EditorUtility.DisplayDialog("Lỗi", "Không tìm thấy CoasterRig hoặc CoasterPassengerManager trong Scene!", "OK");
+            return;
+        }
+
+        CoasterPassengerVoiceManager voiceMgr = passengerMgr.GetComponent<CoasterPassengerVoiceManager>();
+        if (voiceMgr == null)
+        {
+            voiceMgr = Undo.AddComponent<CoasterPassengerVoiceManager>(passengerMgr.gameObject);
+        }
+
+        passengerMgr.voiceManager = voiceMgr;
+        EditorUtility.SetDirty(passengerMgr);
+
+        // 3. Khởi tạo 4 AudioSources 3D và tự động nạp các tệp âm thanh
+        voiceMgr.EnsureAudioSources();
+        voiceMgr.AutoLoadDefaultClipsIfEmpty();
+        EditorUtility.SetDirty(voiceMgr);
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log("<color=#00FF99><b>[NPCSetupTool] ĐÃ THIẾT LẬP THÀNH CÔNG HỆ THỐNG ÂM THANH TIẾNG HÉT 3D CHO TÀU LƯỢN!</b></color>");
+        EditorUtility.DisplayDialog("Thành Công", "Đã thiết lập hoàn tất Hệ thống Âm thanh Tiếng hét 3D (CoasterPassengerVoiceManager):\n- 4 AudioSources 3D cho 4 ghế.\n- Nạp tự động các danh sách Hét Ngắn & Hét Dài cho Nam, Nữ, Trẻ em.\n- Ép Mono & DecompressOnLoad cho toàn bộ file audio.", "OK");
+    }
 }
 #endif
+

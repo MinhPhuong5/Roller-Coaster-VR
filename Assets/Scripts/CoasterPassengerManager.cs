@@ -64,8 +64,9 @@ public class CoasterPassengerManager : MonoBehaviour
     [Tooltip("Thời gian giữ tư thế giơ tay sau mỗi cú rơi (giây)")]
     public float thrillHoldDuration = 1.2f;
 
-    [Header("7. LIÊN KẾT RIDE CONTROLLER")]
+    [Header("7. LIÊN KẾT RIDE CONTROLLER & VOICE MANAGER")]
     public RideController rideController;
+    public CoasterPassengerVoiceManager voiceManager;
 
     [Header("8. ĐIỂM ĐỨNG NGOÀI SẢNH GA (STATION EXIT POINTS)")]
     public Transform[] stationExitPoints = new Transform[4];
@@ -103,6 +104,17 @@ public class CoasterPassengerManager : MonoBehaviour
             rideController = GetComponent<RideController>();
             if (rideController == null) rideController = GetComponentInParent<RideController>();
             if (rideController == null) rideController = Object.FindAnyObjectByType<RideController>();
+        }
+
+        if (voiceManager == null)
+        {
+            voiceManager = GetComponent<CoasterPassengerVoiceManager>();
+            if (voiceManager == null) voiceManager = GetComponentInParent<CoasterPassengerVoiceManager>();
+            if (voiceManager == null) voiceManager = Object.FindAnyObjectByType<CoasterPassengerVoiceManager>();
+            if (voiceManager == null)
+            {
+                voiceManager = gameObject.AddComponent<CoasterPassengerVoiceManager>();
+            }
         }
 
         // Cập nhật scale vector dựa theo multiplier (1.22x)
@@ -461,6 +473,26 @@ public class CoasterPassengerManager : MonoBehaviour
         // Xóa rỗng tham chiếu waitingStationNPCs vì các NPC đã lên tàu
         waitingStationNPCs = new GameObject[3];
 
+        // 7. Đồng bộ nhóm giọng và nguồn phát 3D cho 4 ghế
+        if (voiceManager != null)
+        {
+            voiceManager.playerSeatIndex = currentPlayerSeatIndex;
+            for (int s = 0; s < 4; s++)
+            {
+                if (s == currentPlayerSeatIndex)
+                {
+                    GameObject pObj = playerBody != null ? playerBody.currentNPCBody : null;
+                    if (pObj == null && playerBody != null) pObj = playerBody.chosenPlayerPrefab;
+                    voiceManager.SetPassengerVoiceType(s, pObj);
+                }
+                else
+                {
+                    voiceManager.SetPassengerVoiceType(s, spawnedPassengerObjects[s]);
+                }
+            }
+            voiceManager.AttachAudioSourcesToSeats(sitPoints, passengerHeadBones);
+        }
+
         Debug.Log($"<color=#00FF88><b>[CoasterPassengerManager] Đã đưa 3 NPC từ sảnh ga vào 3 ghế trong tàu và xếp người chơi vào ghế {seatIndex}!</b></color>");
     }
 
@@ -470,6 +502,11 @@ public class CoasterPassengerManager : MonoBehaviour
         if (playerBody != null)
         {
             playerBody.ReturnToPlayerRig();
+        }
+
+        if (voiceManager != null && !voiceManager.IsReliefActive())
+        {
+            voiceManager.StopAllScreamsImmediate();
         }
 
         isPlayerSeated = false;
@@ -600,12 +637,13 @@ public class CoasterPassengerManager : MonoBehaviour
         float clipLength = (rideController != null) ? rideController.ClipLength : 90f;
         float loopTime = progress % clipLength;
 
-        // 1. ĐOẠN KHỞI HÀNH & KÉO XÍCH LÊN DỐC ĐẦU (0s -> 11s) hoặc VÀO GA ĐỖ PHANH CUỐI CHUYẾN (> 86.5s)
+        // 1. ĐOẠN KHỞI HÀNH & KÉO XÍCH LÊN DỐC ĐẦU (0s -> 11.5s) hoặc VÀO GA ĐỖ PHANH CUỐI CHUYẾN (> 86.5s)
         // -> Cả 4 người ngồi yên bình thường, hai tay đặt trên đùi / ôm thanh chắn
-        if (loopTime < 11.0f || loopTime > 86.5f)
+        if (loopTime < 11.5f || loopTime > 86.5f)
         {
             thrillHoldTimer = 0f;
             SetAllPassengersThrilled(false);
+            if (voiceManager != null) voiceManager.UpdateThrillState(false, false);
             Vector3 p = GetCurrentCartPosition();
             lastCartPos = p;
             lastCartPosY = p.y;
@@ -613,7 +651,11 @@ public class CoasterPassengerManager : MonoBehaviour
             return;
         }
 
-        // 2. TÍNH TOÁN CHUYỂN ĐỘNG VẬT LÝ THỰC TẾ 3D CỦA TOA TÀU:
+        // 2. CÁC MỐC THỜI GIAN LEO DỐC CHẬM RÕ RỆT TRÊN RAY (SLOW SECTIONS):
+        // 24s -> 31s (Đoạn quay xe lên dốc 2), 69s -> 76s (Đoạn đỉnh dốc chậm)
+        bool inSlowTrackSection = (loopTime >= 24.0f && loopTime <= 31.0f) || (loopTime >= 69.0f && loopTime <= 76.0f);
+
+        // 3. TÍNH TOÁN CHUYỂN ĐỘNG VẬT LÝ THỰC TẾ 3D CỦA TOA TÀU:
         Vector3 currentPos = GetCurrentCartPosition();
         float deltaTime = Time.deltaTime;
 
@@ -627,51 +669,48 @@ public class CoasterPassengerManager : MonoBehaviour
 
         Vector3 velocity = (currentPos - lastCartPos) / deltaTime;
         float actualSpeed = velocity.magnitude;
-        float verticalVelocity = velocity.y; // Vận tốc thẳng đứng (âm = rơi dốc, dương = leo dốc)
+        float verticalVelocity = velocity.y;
         lastCartPos = currentPos;
         lastCartPosY = currentPos.y;
 
         Transform cartTransform = GetCartTransform();
-        // Góc chúc đầu xuống dốc (pitchDot > 0: đang chúi xuống, pitchDot < 0: đang ngửa lên leo dốc)
         float pitchDot = (cartTransform != null) ? Vector3.Dot(cartTransform.forward, Vector3.down) : 0f;
-        
-        // Độ nghiêng xoắn lượn / lộn vòng (corkscrew / loop / banked turn)
         float bankDot = (cartTransform != null) ? Mathf.Abs(Vector3.Dot(cartTransform.right, Vector3.up)) : 0f;
 
-        // CÁC ĐIỀU KIỆN ĐƯỢC XÁC ĐỊNH LÀ ĐANG LEO DỐC CHẬM (UPHILL / SLOW SECTION):
-        // Khi tàu đang ngửa đầu leo lên dốc (pitchDot < -0.10f hoặc verticalVelocity > 1.0f) và không đang chạy với tốc độ quá nhanh
-        bool isClimbingUphill = (pitchDot < -0.10f || verticalVelocity > 1.0f) && (actualSpeed < 18.0f);
+        // Leo dốc chậm thực sự (tốc độ chậm và ngửa đầu leo lên hoặc nằm trong slow section)
+        bool isClimbingSlow = inSlowTrackSection || ((pitchDot < -0.15f || verticalVelocity > 1.2f) && actualSpeed < 10.0f);
 
-        // CÁC ĐIỀU KIỆN KÍCH HOẠT CẢM GIÁC MẠNH (THRILL):
-        // 1. Đang đổ dốc / lao dốc (pitchDot > 0.10f hoặc verticalVelocity < -0.6f)
-        bool isDropping = (pitchDot > 0.10f || verticalVelocity < -0.6f);
-        // 2. Đoạn lộn vòng / nghiêng ray tốc độ cao (bankDot > 0.35f và actualSpeed > 6.0f)
-        bool isHighGTurnOrLoop = (bankDot > 0.35f && actualSpeed > 6.0f);
-        // 3. Tốc độ thực tế lao nhanh trên đường ray (> 12 m/s)
-        bool isHighSpeedCruising = (actualSpeed > 12.0f);
+        // Các đoạn tốc độ cao & cảm giác mạnh liên tục:
+        // 11.5s-23.5s (Đại dốc 1), 32s-48.5s (Đại dốc 2 & lộn vòng), 50s-68.5s (Uốn lượn tốc độ cao), 77s-86.5s (Lao dốc về ga)
+        bool isFastSection = (loopTime >= 11.5f && loopTime <= 23.5f) || (loopTime >= 32.0f && loopTime <= 48.5f) || (loopTime >= 50.0f && loopTime <= 68.5f) || (loopTime >= 77.0f && loopTime <= 86.5f);
+        bool isDropping = (pitchDot > 0.08f || verticalVelocity < -0.5f);
+        bool isHighGTurnOrLoop = (bankDot > 0.25f && actualSpeed > 5.0f);
 
-        bool shouldBeThrilled = (isDropping || isHighGTurnOrLoop || isHighSpeedCruising) && !isClimbingUphill;
+        bool shouldBeThrilled = (isFastSection || isDropping || isHighGTurnOrLoop || actualSpeed > 8.0f) && !isClimbingSlow;
+        bool isMajorDrop = (pitchDot > 0.2f || verticalVelocity < -2.0f || actualSpeed > 14.0f || (loopTime >= 11.5f && loopTime <= 18.0f) || (loopTime >= 32.0f && loopTime <= 40.0f) || (loopTime >= 78.0f && loopTime <= 85.0f));
 
         if (shouldBeThrilled)
         {
-            // Duy trì động tác trong suốt đoạn dốc + trễ tự nhiên 0.9s sau khi chạm đáy dốc
-            thrillHoldTimer = 0.9f;
+            thrillHoldTimer = 1.2f; // Giữ trạng thái mượt mà chống giật cục
             SetAllPassengersThrilled(true);
+            if (voiceManager != null) voiceManager.UpdateThrillState(true, isMajorDrop);
         }
-        else if (isClimbingUphill)
+        else if (isClimbingSlow)
         {
-            // Khi đang leo dốc chậm: Hạ tay ngay lập tức để ngồi bám ghế chờ cú rơi tiếp theo!
             thrillHoldTimer = 0f;
             SetAllPassengersThrilled(false);
+            if (voiceManager != null) voiceManager.UpdateThrillState(false, false);
         }
         else if (thrillHoldTimer > 0f)
         {
             thrillHoldTimer -= deltaTime;
             SetAllPassengersThrilled(true);
+            if (voiceManager != null) voiceManager.UpdateThrillState(true, isMajorDrop);
         }
         else
         {
             SetAllPassengersThrilled(false);
+            if (voiceManager != null) voiceManager.UpdateThrillState(false, false);
         }
     }
 
