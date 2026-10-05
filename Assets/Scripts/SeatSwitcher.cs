@@ -64,6 +64,15 @@ public class SeatSwitcher : MonoBehaviour
     [Tooltip("Kéo CoasterReturnMapPoint ở ngoài đường dạo công viên vào đây")]
     public Transform parkReturnPoint;
 
+    [Header("Điểm Lưu Vị Trí Công Viên Trước Khi Vào Ga")]
+    public Vector3 savedParkPosition;
+    public Quaternion savedParkRotation;
+    public bool hasSavedParkPosition = false;
+
+    private Vector3 defaultParkSpawnPosition = new Vector3(1.85f, 0.25f, 44.05f);
+    private Quaternion defaultParkSpawnRotation = Quaternion.Euler(0f, 180f, 0f);
+    private bool hasDefaultSpawn = false;
+
     private bool isRiding = false;
     private bool isHandlingExit = false;
     private bool isGateAlreadyClosed = false;
@@ -86,6 +95,14 @@ public class SeatSwitcher : MonoBehaviour
         if (startButton != null) startButton.SetActive(false);
         if (countdownText != null) countdownText.gameObject.SetActive(false);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+
+        // Lưu vị trí đứng ban đầu của người chơi ở công viên
+        if (xrOriginRig != null && xrOriginRig.transform.position.y < 4.5f)
+        {
+            defaultParkSpawnPosition = xrOriginRig.transform.position;
+            defaultParkSpawnRotation = xrOriginRig.transform.rotation;
+            hasDefaultSpawn = true;
+        }
 
         if (stationFloorPoint == null)
         {
@@ -571,46 +588,59 @@ public class SeatSwitcher : MonoBehaviour
         }
     }
 
+    public void SetSavedParkPoint(Vector3 pos, Quaternion rot)
+    {
+        // Chỉ lưu nếu tọa độ hợp lệ và nằm ở ngoài công viên an toàn (không phải ở trong nhà ga trên cao)
+        if (pos.y < 4.5f && (pos.z > 20.0f || pos.sqrMagnitude > 1.0f))
+        {
+            savedParkPosition = pos;
+            savedParkRotation = rot;
+            hasSavedParkPosition = true;
+        }
+    }
+
     /// <summary>
-    /// Tìm điểm mặt sàn thật của công viên / nhà ga (loại bỏ ray tàu, thanh chắn, kiosk UI, trần nhà)
+    /// Tìm điểm mặt sàn thật của công viên / nhà ga (loại bỏ ray tàu, thanh chắn, kiosk UI, trần nhà, NPC, người chơi)
+    /// Đảm bảo chân nhân vật đặt chính xác 100% chạm sát mặt đất (hit.point.y)
     /// </summary>
     public static Vector3 FindSolidGroundPosition(Vector3 referencePos)
     {
-        // Bắn tia từ độ cao vừa phải (+1.2m trên đầu) xuống dưới 12m để tìm mặt sàn thật
-        RaycastHit[] hits = Physics.RaycastAll(referencePos + Vector3.up * 1.2f, Vector3.down, 15.0f, ~0, QueryTriggerInteraction.Ignore);
-        
-        Vector3 bestGroundPoint = referencePos;
-        bool foundGround = false;
+        // 1. Bắn tia từ độ cao 1.5m trên đầu vị trí tham chiếu thẳng xuống dưới
+        Vector3 rayStart = new Vector3(referencePos.x, referencePos.y + 1.5f, referencePos.z);
+        RaycastHit[] hits = Physics.RaycastAll(rayStart, Vector3.down, 25.0f, ~0, QueryTriggerInteraction.Ignore);
+
+        // Sắp xếp các điểm va chạm theo khoảng cách từ trên xuống dưới (gần rayStart nhất lên đầu)
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (var h in hits)
         {
-            if (h.collider == null) continue;
+            if (h.collider == null || h.collider.isTrigger) continue;
             string colName = h.collider.gameObject.name.ToLower();
-            string rootName = h.collider.transform.root.name.ToLower();
+            string rootName = h.collider.transform.root != null ? h.collider.transform.root.name.ToLower() : "";
 
-            // Bỏ qua đường ray tàu lượn, toa tàu, thanh chắn, UI, camera, người chơi
-            if (colName.Contains("track") || colName.Contains("rail") || colName.Contains("coaster") 
-                || colName.Contains("kiosk") || colName.Contains("cart") || colName.Contains("canvas")
-                || colName.Contains("bar") || colName.Contains("gate") || rootName.Contains("coasterrig")
-                || colName.Contains("player") || colName.Contains("origin"))
+            // Bỏ qua người chơi, camera, NPC, đường ray, toa tàu, thanh chắn, UI, kiosk
+            if (colName.Contains("player") || colName.Contains("origin") || colName.Contains("camera")
+                || colName.Contains("npc") || colName.Contains("bot") || colName.Contains("people")
+                || colName.Contains("body") || colName.Contains("character") || colName.Contains("track")
+                || colName.Contains("rail") || colName.Contains("coaster") || colName.Contains("kiosk")
+                || colName.Contains("cart") || colName.Contains("canvas") || colName.Contains("bar")
+                || colName.Contains("gate") || rootName.Contains("coasterrig") || rootName.Contains("player")
+                || rootName.Contains("origin") || rootName.Contains("npc"))
             {
                 continue;
             }
 
-            // Lấy điểm sàn hợp lệ
-            if (!foundGround || h.point.y < bestGroundPoint.y)
-            {
-                bestGroundPoint = h.point + Vector3.up * 0.02f;
-                foundGround = true;
-            }
+            // Điểm mặt sàn đầu tiên bên dưới nhân vật -> Chân nhân vật chạm đất chính xác tại h.point.y
+            return new Vector3(referencePos.x, h.point.y, referencePos.z);
         }
 
-        if (foundGround) return bestGroundPoint;
-
-        // Fallback: Nếu Raycast thông thường trúng
-        if (Physics.Raycast(referencePos + Vector3.up * 0.8f, Vector3.down, out RaycastHit singleHit, 10.0f, ~0, QueryTriggerInteraction.Ignore))
+        // Fallback: Raycast đơn giản
+        if (Physics.Raycast(referencePos + Vector3.up * 1.5f, Vector3.down, out RaycastHit singleHit, 15.0f, ~0, QueryTriggerInteraction.Ignore))
         {
-            return singleHit.point + Vector3.up * 0.02f;
+            if (!singleHit.collider.isTrigger)
+            {
+                return new Vector3(referencePos.x, singleHit.point.y, referencePos.z);
+            }
         }
 
         return referencePos;
@@ -618,43 +648,67 @@ public class SeatSwitcher : MonoBehaviour
 
     public Transform GetOrCreateParkReturnPoint()
     {
-        if (parkReturnPoint != null) return parkReturnPoint;
-
-        // 1. Tìm theo tên CoasterParkReturnPoint
-        GameObject p = GameObject.Find("CoasterParkReturnPoint");
-        if (p != null)
+        // 1. Tìm Object mốc quay về có sẵn trong Scene (CoasterReturrnMapPoint / ReturnMapPoint / CoasterParkReturnPoint)
+        if (parkReturnPoint == null)
         {
-            parkReturnPoint = p.transform;
-            return parkReturnPoint;
+            string[] possibleNames = new string[] 
+            { 
+                "CoasterReturrnMapPoint", 
+                "CoasterReturnMapPoint", 
+                "returnmappoint", 
+                "ReturnMapPoint", 
+                "CoasterParkReturnPoint" 
+            };
+
+            foreach (var name in possibleNames)
+            {
+                GameObject foundObj = GameObject.Find(name);
+                if (foundObj != null)
+                {
+                    parkReturnPoint = foundObj.transform;
+                    break;
+                }
+            }
         }
 
-        // 2. Tìm theo Kiosk 3D (RollerCoasterInteraction / Canvas_GameInteraction)
-        RollerCoasterInteraction interaction = Object.FindAnyObjectByType<RollerCoasterInteraction>();
-        if (interaction != null)
+        Vector3 targetPos;
+        Quaternion targetRot;
+
+        // Ưu tiên cao nhất: Dùng chính xác Object điểm quay về (CoasterReturrnMapPoint) đặt trước UI
+        if (parkReturnPoint != null)
         {
-            GameObject returnObj = new GameObject("CoasterParkReturnPoint");
-            // Đặt điểm quay về đứng trên mặt đường dạo phía trước Kiosk 2.5m
-            Vector3 pos = interaction.transform.position - interaction.transform.forward * 2.5f;
-            pos = FindSolidGroundPosition(pos);
-            returnObj.transform.position = pos;
-            returnObj.transform.rotation = interaction.transform.rotation;
+            targetPos = parkReturnPoint.position;
+            targetRot = parkReturnPoint.rotation;
+        }
+        else if (hasSavedParkPosition && savedParkPosition.y < 4.5f && savedParkPosition.z > 18.0f)
+        {
+            targetPos = savedParkPosition;
+            targetRot = savedParkRotation;
+        }
+        else
+        {
+            GameObject walkZone = GameObject.Find("WalkZone");
+            if (walkZone != null)
+            {
+                targetPos = walkZone.transform.position;
+                targetRot = walkZone.transform.rotation;
+            }
+            else
+            {
+                targetPos = defaultParkSpawnPosition;
+                targetRot = defaultParkSpawnRotation;
+            }
+        }
+
+        Vector3 groundPos = FindSolidGroundPosition(targetPos);
+        if (parkReturnPoint == null)
+        {
+            GameObject returnObj = new GameObject("CoasterReturrnMapPoint");
             parkReturnPoint = returnObj.transform;
-            return parkReturnPoint;
         }
-
-        GameObject kioskObj = GameObject.Find("Canvas_GameInteraction");
-        if (kioskObj != null)
-        {
-            GameObject returnObj = new GameObject("CoasterParkReturnPoint");
-            Vector3 pos = kioskObj.transform.position - kioskObj.transform.forward * 2.5f;
-            pos = FindSolidGroundPosition(pos);
-            returnObj.transform.position = pos;
-            returnObj.transform.rotation = kioskObj.transform.rotation;
-            parkReturnPoint = returnObj.transform;
-            return parkReturnPoint;
-        }
-
-        return null;
+        parkReturnPoint.position = groundPos;
+        parkReturnPoint.rotation = targetRot;
+        return parkReturnPoint;
     }
 
     private void RestoreStandingPlayer(Transform targetSpawnPoint)
@@ -675,11 +729,35 @@ public class SeatSwitcher : MonoBehaviour
             }
         }
 
-        // 1. Tháo XR Origin ra khỏi tàu và đưa về vị trí sàn (Raycast chuẩn chạm mặt sàn công viên)
+        // 1. Lấy chiều cao mắt thực tế của NPC đại diện
+        float eyeHeight = 1.50f;
+        PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
+        if (playerBody != null)
+        {
+            eyeHeight = playerBody.GetPlayerStandingEyeHeight();
+        }
+        else if (standingEyeHeight > 0.5f)
+        {
+            eyeHeight = standingEyeHeight;
+        }
+
+        // 2. Tháo XR Origin ra khỏi tàu và đưa về vị trí sàn (Raycast chuẩn chạm mặt sàn công viên)
         if (xrOriginRig != null)
         {
             CharacterController cc = xrOriginRig.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;
+            if (cc != null)
+            {
+                cc.enabled = false;
+                cc.height = Mathf.Max(1.6f, eyeHeight + 0.15f);
+                cc.center = new Vector3(0f, cc.height / 2f, 0f);
+            }
+
+            XRFallbackWalkController walkCtrl = xrOriginRig.GetComponent<XRFallbackWalkController>();
+            if (walkCtrl != null)
+            {
+                walkCtrl.enabled = false;
+                walkCtrl.ResetVerticalVelocity();
+            }
 
             xrOriginRig.transform.SetParent(null);
             xrOriginRig.transform.localScale = Vector3.one;
@@ -696,20 +774,17 @@ public class SeatSwitcher : MonoBehaviour
                 cc.Move(Vector3.down * 0.05f); // Ép CharacterController chạm đất ngay lập tức
             }
             Physics.SyncTransforms();
+
+            if (walkCtrl != null)
+            {
+                walkCtrl.FindAndCacheWalkZones(true);
+                walkCtrl.enabled = true;
+                walkCtrl.ResetVerticalVelocity();
+                walkCtrl.InitCameraAngles();
+            }
         }
 
-        // 2. Trả Main Camera về cha ban đầu và ĐẶT ĐÚNG TẦM MẮT THEO CHIỀU CAO THỰC CỦA NPC ĐẠI DIỆN
-        float eyeHeight = 1.45f;
-        PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
-        if (playerBody != null)
-        {
-            eyeHeight = playerBody.GetPlayerStandingEyeHeight();
-        }
-        else
-        {
-            eyeHeight = (standingEyeHeight > 0.5f) ? standingEyeHeight : 1.45f;
-        }
-
+        // 3. Trả Main Camera về cha ban đầu và ĐẶT ĐÚNG TẦM MẮT THEO CHIỀU CAO THỰC CỦA NPC ĐẠI DIỆN
         if (mainCameraTransform != null)
         {
             if (originalCamParent != null && mainCameraTransform.parent != originalCamParent)
@@ -719,21 +794,21 @@ public class SeatSwitcher : MonoBehaviour
 
             if (originalCamParent != null && originalCamParent != xrOriginRig.transform)
             {
-                // Nếu có Camera Offset: đặt Camera Offset ở độ cao mắt và Camera ở (0,0,0)
-                originalCamParent.localPosition = new Vector3(0f, eyeHeight, 0f);
+                // Nếu có Camera Offset: đặt Camera Offset ở độ cao mắt và dịch nhẹ về trước 0.06m
+                originalCamParent.localPosition = new Vector3(0f, eyeHeight, 0.06f);
                 originalCamParent.localRotation = Quaternion.identity;
                 mainCameraTransform.localPosition = Vector3.zero;
             }
             else
             {
                 // Nếu Camera gắn trực tiếp vào XR Origin: đặt Camera ở độ cao mắt
-                mainCameraTransform.localPosition = new Vector3(0f, eyeHeight, 0f);
+                mainCameraTransform.localPosition = new Vector3(0f, eyeHeight, 0.06f);
             }
 
             mainCameraTransform.localRotation = Quaternion.identity;
         }
 
-        // 3. Tắt xoay góc nhìn chuột trong tàu, bật bộ điều khiển đi bộ tự do
+        // 4. Tắt xoay góc nhìn chuột trong tàu, bật bộ điều khiển đi bộ tự do
         if (mouseLook != null)
         {
             mouseLook.enabled = false;
@@ -766,6 +841,7 @@ public class SeatSwitcher : MonoBehaviour
         {
             passengerManager.ReleasePlayerPassenger();
             passengerManager.ClearOldPassengers();
+            passengerManager.ClearWaitingStationNPCs();
         }
 
         PlayerNPCBodyController playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
@@ -780,5 +856,7 @@ public class SeatSwitcher : MonoBehaviour
         HideUI();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+
+        Debug.Log($"<color=#00FF88><b>[SeatSwitcher] Đã thoát khỏi tàu lượn và trở về công viên an toàn tại: {(returnPoint != null ? returnPoint.position.ToString() : "Park")}</b></color>");
     }
 }

@@ -350,6 +350,14 @@ public class RollerCoasterInteraction : MonoBehaviour
         // 1. Dịch chuyển XR Origin đến ga tàu
         if (xrOriginObject != null && stationEntryPoint != null)
         {
+            // Lưu lại vị trí đứng an toàn tại công viên trước khi vào ga để phục vụ quay về sau này
+            Vector3 safeParkPos = xrOriginObject.transform.position;
+            Quaternion safeParkRot = xrOriginObject.transform.rotation;
+            if (seatSwitcher != null)
+            {
+                seatSwitcher.SetSavedParkPoint(safeParkPos, safeParkRot);
+            }
+
             CharacterController cc = xrOriginObject.GetComponent<CharacterController>();
             if (cc != null) cc.enabled = false;
 
@@ -384,14 +392,15 @@ public class RollerCoasterInteraction : MonoBehaviour
                 Transform camParent = mainCam.transform.parent;
                 if (camParent != null && camParent != xrOriginObject.transform)
                 {
-                    camParent.localPosition = new Vector3(0f, eyeHeight, 0f);
+                    camParent.localPosition = new Vector3(0f, eyeHeight, 0.06f);
                     mainCam.transform.localPosition = Vector3.zero;
                 }
                 else
                 {
-                    mainCam.transform.localPosition = new Vector3(0f, eyeHeight, 0f);
+                    mainCam.transform.localPosition = new Vector3(0f, eyeHeight, 0.06f);
                 }
                 mainCam.transform.localRotation = Quaternion.identity;
+                mainCam.nearClipPlane = 0.05f;
             }
 
             if (cc != null) cc.enabled = true;

@@ -122,6 +122,14 @@ public class RideController : MonoBehaviour
             XRFallbackWalkController walk = Object.FindAnyObjectByType<XRFallbackWalkController>();
             if (walk != null) xrOriginObject = walk.gameObject;
         }
+
+        if (mapReturnPoint == null)
+        {
+            GameObject returnObj = GameObject.Find("CoasterReturrnMapPoint");
+            if (returnObj == null) returnObj = GameObject.Find("CoasterReturnMapPoint");
+            if (returnObj == null) returnObj = GameObject.Find("returnmappoint");
+            if (returnObj != null) mapReturnPoint = returnObj.transform;
+        }
     }
 
     void Update()
@@ -310,29 +318,49 @@ public class RideController : MonoBehaviour
     // Sự kiện nút KHÔNG (BtnNo)
     public void OnClick_ExitToMap()
     {
+        if (rideUIPanel != null) rideUIPanel.SetActive(false);
+        if (gameOverGroup != null) gameOverGroup.SetActive(false);
+        if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
+
         if (seatSwitcher != null)
         {
             seatSwitcher.ReturnToParkMap();
         }
         else
         {
-            if (rideUIPanel != null) rideUIPanel.SetActive(false);
-            if (xrOriginObject != null && mapReturnPoint != null)
+            if (xrOriginObject != null)
             {
-                xrOriginObject.transform.SetParent(null);
-                xrOriginObject.transform.localScale = Vector3.one;
-                CharacterController cc = xrOriginObject.GetComponent<CharacterController>();
-                if (cc != null) cc.enabled = false;
-                xrOriginObject.transform.SetPositionAndRotation(mapReturnPoint.position, mapReturnPoint.rotation);
-                if (cc != null) cc.enabled = true;
-                Physics.SyncTransforms();
+                Transform targetPoint = mapReturnPoint != null ? mapReturnPoint : (seatSwitcher != null ? seatSwitcher.GetOrCreateParkReturnPoint() : null);
+                if (targetPoint != null)
+                {
+                    xrOriginObject.transform.SetParent(null);
+                    xrOriginObject.transform.localScale = Vector3.one;
+                    CharacterController cc = xrOriginObject.GetComponent<CharacterController>();
+                    if (cc != null) cc.enabled = false;
 
-                PlayerNPCBodyController playerBody = xrOriginObject.GetComponent<PlayerNPCBodyController>();
-                if (playerBody == null) playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
-                if (playerBody != null) playerBody.SetParkScale();
+                    XRFallbackWalkController walkCtrl = xrOriginObject.GetComponent<XRFallbackWalkController>();
+                    if (walkCtrl != null)
+                    {
+                        walkCtrl.enabled = false;
+                        walkCtrl.ResetVerticalVelocity();
+                    }
 
-                XRFallbackWalkController walkCtrl = xrOriginObject.GetComponent<XRFallbackWalkController>();
-                if (walkCtrl != null) walkCtrl.enabled = true;
+                    Vector3 groundPos = SeatSwitcher.FindSolidGroundPosition(targetPoint.position);
+                    xrOriginObject.transform.SetPositionAndRotation(groundPos, targetPoint.rotation);
+                    if (cc != null) cc.enabled = true;
+                    Physics.SyncTransforms();
+
+                    PlayerNPCBodyController playerBody = xrOriginObject.GetComponent<PlayerNPCBodyController>();
+                    if (playerBody == null) playerBody = Object.FindAnyObjectByType<PlayerNPCBodyController>();
+                    if (playerBody != null) playerBody.SetParkScale();
+
+                    if (walkCtrl != null)
+                    {
+                        walkCtrl.enabled = true;
+                        walkCtrl.ResetVerticalVelocity();
+                        walkCtrl.InitCameraAngles();
+                    }
+                }
             }
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;

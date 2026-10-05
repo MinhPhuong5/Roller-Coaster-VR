@@ -98,12 +98,19 @@ public class XRFallbackWalkController : MonoBehaviour
     {
         ConfigureCharacterController();
         EnsureWalkZonesAreTriggers();
+        ResetVerticalVelocity();
+        SnapToGround();
 
         // Tắt MouseLook đi kèm nếu có để tránh xung đột kép góc quay
         MouseLook ml = GetComponentInChildren<MouseLook>();
         if (ml != null) ml.enabled = false;
 
         InitCameraAngles();
+    }
+
+    public void ResetVerticalVelocity()
+    {
+        verticalVelocity = 0f;
     }
 
     void Start()
@@ -117,6 +124,8 @@ public class XRFallbackWalkController : MonoBehaviour
 
         ConfigureCharacterController();
         InitCameraAngles();
+        ResetVerticalVelocity();
+        SnapToGround();
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -141,6 +150,21 @@ public class XRFallbackWalkController : MonoBehaviour
     void Update()
     {
         if (isVRActive) return;
+
+        // Chống rơi vô hạn ra khỏi bản đồ công viên
+        if (transform.position.y < -15.0f)
+        {
+            Vector3 safePos = new Vector3(0.87f, 1.2f, 15.77f);
+            GameObject walkZone = GameObject.Find("WalkZone");
+            if (walkZone != null) safePos = walkZone.transform.position + Vector3.up * 0.5f;
+
+            if (characterController != null) characterController.enabled = false;
+            transform.position = safePos;
+            ResetVerticalVelocity();
+            if (characterController != null) characterController.enabled = true;
+            Physics.SyncTransforms();
+            Debug.LogWarning("[XRFallbackWalkController] Đã tự động cứu người chơi khỏi rơi map và đưa về sàn an toàn!");
+        }
 
         // 1. Quản lý trạng thái khóa chuột (giữ chuột phải để lia góc nhìn)
         if (Mouse.current != null)
@@ -231,14 +255,22 @@ public class XRFallbackWalkController : MonoBehaviour
             verticalVelocity += gravity * Time.deltaTime;
         }
 
-        Vector3 horizontalMove = moveDir * speed * Time.deltaTime;
+        Vector3 horizontalMove = moveDir * speed;
+        Vector3 velocity = horizontalMove + (Vector3.up * verticalVelocity);
+        characterController.Move(velocity * Time.deltaTime);
+    }
 
-        // Di chuyển thuần túy theo vật lý mặt sàn và tường va chạm MeshCollider (giống hệt công viên)
-        if (isMoving || !isGrounded)
+    public void SnapToGround()
+    {
+        if (characterController != null) characterController.enabled = false;
+        Vector3 groundPos = SeatSwitcher.FindSolidGroundPosition(transform.position);
+        transform.position = groundPos;
+        if (characterController != null)
         {
-            Vector3 velocity = (horizontalMove / Time.deltaTime) + (Vector3.up * verticalVelocity);
-            characterController.Move(velocity * Time.deltaTime);
+            characterController.enabled = true;
+            characterController.Move(Vector3.down * 0.05f);
         }
+        Physics.SyncTransforms();
     }
 
     public void FindAndCacheWalkZones(bool forceRefresh = false) { }

@@ -191,17 +191,18 @@ public class PlayerNPCBodyController : MonoBehaviour
             Transform camParent = mainCamera.transform.parent;
             if (camParent != null && camParent != transform)
             {
-                // Có Camera Offset (chuẩn XR Origin): đặt Camera Offset ở độ cao mắt của NPC
-                camParent.localPosition = new Vector3(0f, eyeHeight, 0f);
+                // Có Camera Offset (chuẩn XR Origin): đặt Camera Offset ở độ cao mắt của NPC và dịch nhẹ về trước 0.06m
+                camParent.localPosition = new Vector3(0f, eyeHeight, 0.06f);
                 camParent.localRotation = Quaternion.identity;
                 mainCamera.transform.localPosition = Vector3.zero;
             }
             else
             {
                 // Camera gắn trực tiếp vào root
-                mainCamera.transform.localPosition = new Vector3(0f, eyeHeight, 0f);
+                mainCamera.transform.localPosition = new Vector3(0f, eyeHeight, 0.06f);
             }
             mainCamera.transform.localRotation = Quaternion.identity;
+            mainCamera.nearClipPlane = 0.05f;
         }
 
         CharacterController cc = GetComponent<CharacterController>();
@@ -210,6 +211,8 @@ public class PlayerNPCBodyController : MonoBehaviour
             cc.height = Mathf.Max(0.8f, eyeHeight + 0.15f);
             cc.center = new Vector3(0f, cc.height / 2f, 0f);
         }
+
+        SetupCameraCulling();
 
         Debug.Log($"<color=#00FF88><b>[PlayerNPCBodyController] Đã căn chỉnh Camera theo đầu NPC '{chosenPlayerPrefab?.name}': Chiều cao mắt = {eyeHeight:F3}m (Bỏ qua Inspector mặc định)</b></color>");
     }
@@ -249,23 +252,29 @@ public class PlayerNPCBodyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Chuyển scale NPC đại diện về tỷ lệ công viên (Scale 1.0x)
+    /// Chuyển scale NPC đại diện về tỷ lệ chuẩn công viên (Scale 1.22x)
     /// </summary>
     public void SetParkScale()
     {
-        standingScale = Vector3.one;
+        standingScale = (initialParkStandingScale.sqrMagnitude > 0.01f) ? initialParkStandingScale : new Vector3(1.22f, 1.22f, 1.22f);
         seatedScale = new Vector3(1.22f, 1.22f, 1.22f);
         if (currentNPCBody != null)
         {
             currentNPCBody.transform.localScale = standingScale;
-            Debug.Log($"<color=#00CCFF><b>[PlayerNPCBodyController] Đã trả scale NPC đại diện về 1.0x cho công viên: {currentNPCBody.transform.localScale}</b></color>");
+            Debug.Log($"<color=#00CCFF><b>[PlayerNPCBodyController] Đã trả scale NPC đại diện về chuẩn công viên: {currentNPCBody.transform.localScale}</b></color>");
         }
 
         AlignCameraToHead();
     }
 
+    private Vector3 initialParkStandingScale = new Vector3(1.22f, 1.22f, 1.22f);
+
     void Awake()
     {
+        if (standingScale.sqrMagnitude > 0.01f)
+        {
+            initialParkStandingScale = standingScale;
+        }
         ResolvePlayerReferences();
         SetupCameraCulling();
         LoadDefaultAssetsIfEmpty();
@@ -346,6 +355,117 @@ public class PlayerNPCBodyController : MonoBehaviour
         }
     }
 
+    private Renderer[] cachedPlayerRenderers;
+
+    private void OnEnable()
+    {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+        UnityEngine.Rendering.RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+        Camera.onPreCull += OnCameraPreCull;
+        Camera.onPostRender += OnCameraPostRender;
+        CachePlayerRenderers();
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+        UnityEngine.Rendering.RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+        Camera.onPreCull -= OnCameraPreCull;
+        Camera.onPostRender -= OnCameraPostRender;
+        ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
+    }
+
+    private void OnDestroy()
+    {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+        UnityEngine.Rendering.RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+        Camera.onPreCull -= OnCameraPreCull;
+        Camera.onPostRender -= OnCameraPostRender;
+    }
+
+    /// <summary>
+    /// Xử lý render cho URP / HDRP:
+    /// - Khi vẽ Camera Game / Main Camera: Đặt ShadowsOnly (Không thấy người, nhưng bóng đổ 100%).
+    /// - Khi vẽ Camera SceneView: Đặt On (Thấy đầy đủ người và bóng đổ trong tab Scene để dev quan sát).
+    /// </summary>
+    private void OnBeginCameraRendering(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
+    {
+        if (cam == null || currentNPCBody == null) return;
+
+        if (cam.cameraType == CameraType.SceneView)
+        {
+            ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
+        }
+        else
+        {
+            ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
+        }
+    }
+
+    private void OnEndCameraRendering(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
+    {
+        if (currentNPCBody == null) return;
+        // Trả về On để trạng thái hiển thị trong Editor / Scene View luôn sẵn sàng
+        ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
+    }
+
+    /// <summary>
+    /// Callback dự phòng cho Built-in Render Pipeline
+    /// </summary>
+    private void OnCameraPreCull(Camera cam)
+    {
+        if (cam == null || currentNPCBody == null) return;
+
+        if (cam.cameraType == CameraType.SceneView)
+        {
+            ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
+        }
+        else
+        {
+            ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
+        }
+    }
+
+    private void OnCameraPostRender(Camera cam)
+    {
+        if (currentNPCBody == null) return;
+        ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
+    }
+
+    public void CachePlayerRenderers()
+    {
+        if (currentNPCBody != null)
+        {
+            cachedPlayerRenderers = currentNPCBody.GetComponentsInChildren<Renderer>(true);
+        }
+        else
+        {
+            cachedPlayerRenderers = null;
+        }
+    }
+
+    public void ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode mode)
+    {
+        if (cachedPlayerRenderers == null || cachedPlayerRenderers.Length == 0)
+        {
+            if (currentNPCBody != null) CachePlayerRenderers();
+            if (cachedPlayerRenderers == null) return;
+        }
+
+        for (int i = 0; i < cachedPlayerRenderers.Length; i++)
+        {
+            Renderer r = cachedPlayerRenderers[i];
+            if (r != null)
+            {
+                if (r.shadowCastingMode != mode)
+                {
+                    r.shadowCastingMode = mode;
+                }
+                r.receiveShadows = true;
+            }
+        }
+    }
+
     public void ResolvePlayerReferences()
     {
         if (xrOriginRig == null)
@@ -374,10 +494,13 @@ public class PlayerNPCBodyController : MonoBehaviour
 
         if (mainCamera != null)
         {
-            // Tắt render Layer của NPC đại diện trên Camera chính của người chơi
-            // Giúp người chơi có tầm nhìn FPS/VR thông thoáng 100%, không bị vướng đầu/tay
-            // Nhưng trong Scene View vẫn hiển thị đầy đủ mọi bộ phận!
-            mainCamera.cullingMask &= ~(1 << playerBodyLayer);
+            // BẬT Layer PlayerBody trong Main Camera CullingMask để Shadow Pass của Main Camera quét và tạo bóng đổ 100% cho người chơi trong tab Game!
+            mainCamera.cullingMask |= (1 << playerBodyLayer);
+
+            if (mainCamera.nearClipPlane < 0.05f)
+            {
+                mainCamera.nearClipPlane = 0.05f;
+            }
         }
     }
 
@@ -434,8 +557,10 @@ public class PlayerNPCBodyController : MonoBehaviour
         currentNPCBody.transform.localRotation = Quaternion.identity;
         currentNPCBody.transform.localScale = standingScale;
 
-        // Đặt toàn bộ Mesh sang Layer ẩn khỏi Main Camera
+        // Đặt toàn bộ Mesh sang Layer người chơi
         SetLayerRecursively(currentNPCBody, playerBodyLayer);
+        CachePlayerRenderers();
+        ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
 
         // Vô hiệu hóa các script di chuyển/collider thừa trên model
         DisableNPCInternalMovement(currentNPCBody);
@@ -484,6 +609,8 @@ public class PlayerNPCBodyController : MonoBehaviour
             currentNPCBody.transform.localScale = (scale.sqrMagnitude > 0.01f) ? scale : seatedScale;
 
             SetLayerRecursively(currentNPCBody, playerBodyLayer);
+            CachePlayerRenderers();
+            ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
 
             if (npcAnimator == null) npcAnimator = currentNPCBody.GetComponent<Animator>();
             if (npcAnimator != null)
@@ -551,6 +678,8 @@ public class PlayerNPCBodyController : MonoBehaviour
             currentNPCBody.transform.localScale = standingScale;
 
             SetLayerRecursively(currentNPCBody, playerBodyLayer);
+            CachePlayerRenderers();
+            ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
 
             if (npcAnimator != null)
             {
@@ -573,6 +702,25 @@ public class PlayerNPCBodyController : MonoBehaviour
         foreach (Transform child in go.transform)
         {
             if (child != null) SetLayerRecursively(child.gameObject, newLayer);
+        }
+    }
+
+    /// <summary>
+    /// Đặt chế độ đổ bóng ShadowsOnly cho toàn bộ MeshRenderer / SkinnedMeshRenderer của nhân vật:
+    /// - Không vẽ mặt cắt (invisible to camera) -> Tầm nhìn người chơi cực kỳ thông thoáng.
+    /// - Vẫn gửi đầy đủ xương & cử động sang Shadow Caster pass -> ĐỔ BÓNG 100% XUỐNG SÀN VÀ MẶT ĐẤT.
+    /// </summary>
+    public static void SetShadowCastingModeRecursively(GameObject go, UnityEngine.Rendering.ShadowCastingMode mode)
+    {
+        if (go == null) return;
+        Renderer[] renderers = go.GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            if (r != null)
+            {
+                r.shadowCastingMode = mode;
+                r.receiveShadows = true;
+            }
         }
     }
 
