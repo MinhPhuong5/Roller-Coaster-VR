@@ -383,16 +383,29 @@ public class PlayerNPCBodyController : MonoBehaviour
         Camera.onPostRender -= OnCameraPostRender;
     }
 
+    [Header("6. Chế Độ Toàn Cảnh (Flycam)")]
+    [Tooltip("Khi camera bay ra ngoài quan sát toàn cảnh: Bật hiển thị 100% người chơi trong tab Game")]
+    public bool isAerialViewActive = false;
+
+    /// <summary>
+    /// Bật/Tắt hiển thị người chơi khi camera chuyển đổi giữa Buồng lái (Cockpit) và Toàn cảnh (Flycam)
+    /// </summary>
+    public void SetAerialViewActive(bool active)
+    {
+        isAerialViewActive = active;
+        ApplyShadowCastingMode(active ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
+    }
+
     /// <summary>
     /// Xử lý render cho URP / HDRP:
-    /// - Khi vẽ Camera Game / Main Camera: Đặt ShadowsOnly (Không thấy người, nhưng bóng đổ 100%).
-    /// - Khi vẽ Camera SceneView: Đặt On (Thấy đầy đủ người và bóng đổ trong tab Scene để dev quan sát).
+    /// - Khi vẽ Camera SceneView hoặc khi đang ở chế độ Flycam toàn cảnh (isAerialViewActive = true): Đặt On (Thấy đầy đủ 100% người và bóng đổ trong tab Game & Scene).
+    /// - Khi ngồi trong buồng lái góc nhìn thứ nhất (isAerialViewActive = false): Đặt ShadowsOnly (Không thấy che khuất mắt, nhưng bóng đổ 100% xuống tàu).
     /// </summary>
     private void OnBeginCameraRendering(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
     {
         if (cam == null || currentNPCBody == null) return;
 
-        if (cam.cameraType == CameraType.SceneView)
+        if (cam.cameraType == CameraType.SceneView || isAerialViewActive)
         {
             ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
         }
@@ -405,8 +418,8 @@ public class PlayerNPCBodyController : MonoBehaviour
     private void OnEndCameraRendering(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
     {
         if (currentNPCBody == null) return;
-        // Trả về On để trạng thái hiển thị trong Editor / Scene View luôn sẵn sàng
-        ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
+        // Trả về On nếu đang ở chế độ Flycam hoặc trong SceneView
+        ApplyShadowCastingMode(isAerialViewActive ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
     }
 
     /// <summary>
@@ -416,7 +429,7 @@ public class PlayerNPCBodyController : MonoBehaviour
     {
         if (cam == null || currentNPCBody == null) return;
 
-        if (cam.cameraType == CameraType.SceneView)
+        if (cam.cameraType == CameraType.SceneView || isAerialViewActive)
         {
             ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
         }
@@ -429,7 +442,7 @@ public class PlayerNPCBodyController : MonoBehaviour
     private void OnCameraPostRender(Camera cam)
     {
         if (currentNPCBody == null) return;
-        ApplyShadowCastingMode(UnityEngine.Rendering.ShadowCastingMode.On);
+        ApplyShadowCastingMode(isAerialViewActive ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly);
     }
 
     public void CachePlayerRenderers()

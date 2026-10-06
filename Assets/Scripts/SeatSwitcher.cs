@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using TMPro;
 
@@ -12,6 +13,10 @@ public class SeatSwitcher : MonoBehaviour
     [Header("XR Controllers (Ẩn khi tàu chạy)")]
     public GameObject leftController;
     public GameObject rightController;
+    [Tooltip("Tự động ẩn hoàn toàn tay cầm và tia laser trắng khi chơi trên PC / Desktop (không cắm kính VR)")]
+    public bool autoHideControllersOnDesktop = true;
+    [Tooltip("Ẩn hoàn toàn tia laser trắng của tay cầm (chỉ giữ lại chuột trên PC và tương tác trên VR)")]
+    public bool hideControllerRays = true;
 
     [Header("Chế Độ Xoay Chuột")]
     [Tooltip("Kéo MouseLook trên Main Camera của XR Origin vào đây")]
@@ -33,6 +38,9 @@ public class SeatSwitcher : MonoBehaviour
     [Tooltip("Danh sách các thanh chắn nếu ga có nhiều làn (nếu để trống script tự tìm toàn bộ thanh chắn)")]
     public StationGateController[] stationGates;
 
+    [Header("Flycam Toàn Cảnh")]
+    public CoasterAerialCameraController aerialCameraController;
+
     [Header("UI Sảnh")]
     [Tooltip("Kéo RideUIPanel vào đây")]
     public GameObject uiPanel;
@@ -41,6 +49,8 @@ public class SeatSwitcher : MonoBehaviour
     [Tooltip("Kéo GameOverGroup vào đây (hỏi chơi tiếp)")]
     public GameObject gameOverPanel;
     public GameObject startButton;
+
+    public int CurrentSeatIndex => currentSeatIndex;
 
     [Header("Tùy Chọn Đếm Ngược")]
     public bool useCountdownText = true;
@@ -134,6 +144,15 @@ public class SeatSwitcher : MonoBehaviour
             stationGates = Object.FindObjectsByType<StationGateController>(FindObjectsSortMode.None);
         }
 
+        if (aerialCameraController == null)
+        {
+            aerialCameraController = Object.FindAnyObjectByType<CoasterAerialCameraController>();
+            if (aerialCameraController == null && rideController != null)
+            {
+                aerialCameraController = rideController.gameObject.AddComponent<CoasterAerialCameraController>();
+            }
+        }
+
         if (mouseLook != null)
         {
             mouseLook.enabled = false;
@@ -220,6 +239,24 @@ public class SeatSwitcher : MonoBehaviour
                     if (mouseLook == null)
                     {
                         mouseLook = cam.GetComponent<MouseLook>();
+                    }
+                }
+            }
+
+            if (leftController == null || rightController == null)
+            {
+                Transform camOffset = xrOriginRig.transform.Find("Camera Offset");
+                if (camOffset != null)
+                {
+                    if (leftController == null)
+                    {
+                        Transform lc = camOffset.Find("Left Controller");
+                        if (lc != null) leftController = lc.gameObject;
+                    }
+                    if (rightController == null)
+                    {
+                        Transform rc = camOffset.Find("Right Controller");
+                        if (rc != null) rightController = rc.gameObject;
                     }
                 }
             }
@@ -362,7 +399,11 @@ public class SeatSwitcher : MonoBehaviour
         Cursor.visible = true;
 
         // 4. Bật bảng chọn ghế, ẩn bảng kết thúc
-        if (uiPanel != null) uiPanel.SetActive(true);
+        if (uiPanel != null)
+        {
+            PrepareCanvasForInteraction(uiPanel);
+            uiPanel.SetActive(true);
+        }
         if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (startButton != null) startButton.SetActive(false);
@@ -382,11 +423,20 @@ public class SeatSwitcher : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        if (uiPanel != null) uiPanel.SetActive(true);
+        if (uiPanel != null)
+        {
+            PrepareCanvasForInteraction(uiPanel);
+            uiPanel.SetActive(true);
+        }
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (selectSeatGroup != null) selectSeatGroup.SetActive(true);
         if (startButton != null) startButton.SetActive(false);
         if (countdownText != null) countdownText.gameObject.SetActive(false);
+
+        if (aerialCameraController != null)
+        {
+            aerialCameraController.OnRideStart();
+        }
 
         if (rideController != null)
         {
@@ -502,6 +552,11 @@ public class SeatSwitcher : MonoBehaviour
 
         SetControllersActive(false);
 
+        if (aerialCameraController != null)
+        {
+            aerialCameraController.OnRideStart();
+        }
+
         if (rideController != null)
         {
             rideController.StartRide();
@@ -579,12 +634,44 @@ public class SeatSwitcher : MonoBehaviour
         Cursor.visible = true;
 
         // 9. Hiện bảng hỏi chơi lại (GameOverGroup)
-        if (uiPanel != null) uiPanel.SetActive(true);
+        if (uiPanel != null)
+        {
+            PrepareCanvasForInteraction(uiPanel);
+            uiPanel.SetActive(true);
+        }
         if (selectSeatGroup != null) selectSeatGroup.SetActive(false);
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
             Debug.Log("<color=#00FF88><b>[SeatSwitcher] Thanh chắn đã đóng 100% + thở phào xong -> Đã đưa người chơi ra sàn ga và hiện GameOverGroup!</b></color>");
+        }
+    }
+
+    /// <summary>
+    /// Chuẩn bị và bảo vệ Canvas tránh crash KeyNotFoundException của TrackedDeviceGraphicRaycaster
+    /// </summary>
+    public void PrepareCanvasForInteraction(GameObject panel)
+    {
+        if (panel == null) return;
+        Canvas canvas = panel.GetComponent<Canvas>();
+        if (canvas == null) canvas = panel.GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            if (canvas.renderMode == RenderMode.WorldSpace && canvas.worldCamera == null)
+            {
+                canvas.worldCamera = Camera.main;
+            }
+
+            GraphicRaycaster gr = canvas.GetComponent<GraphicRaycaster>();
+            if (gr == null) gr = canvas.gameObject.AddComponent<GraphicRaycaster>();
+            gr.enabled = true;
+
+            bool hasHMD = DesktopUIInputFallback.IsHMDConnected();
+            var tr = canvas.GetComponent<UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster>();
+            if (tr != null)
+            {
+                tr.enabled = hasHMD;
+            }
         }
     }
 
@@ -630,6 +717,13 @@ public class SeatSwitcher : MonoBehaviour
                 continue;
             }
 
+            if (h.collider.GetComponentInParent<ParkNPCWanderer>() != null 
+                || h.collider.GetComponentInParent<CoasterPassengerManager>() != null
+                || h.collider.GetComponentInParent<PlayerNPCBodyController>() != null)
+            {
+                continue;
+            }
+
             // Điểm mặt sàn đầu tiên bên dưới nhân vật -> Chân nhân vật chạm đất chính xác tại h.point.y
             return new Vector3(referencePos.x, h.point.y, referencePos.z);
         }
@@ -637,7 +731,10 @@ public class SeatSwitcher : MonoBehaviour
         // Fallback: Raycast đơn giản
         if (Physics.Raycast(referencePos + Vector3.up * 1.5f, Vector3.down, out RaycastHit singleHit, 15.0f, ~0, QueryTriggerInteraction.Ignore))
         {
-            if (!singleHit.collider.isTrigger)
+            if (!singleHit.collider.isTrigger 
+                && singleHit.collider.GetComponentInParent<ParkNPCWanderer>() == null
+                && singleHit.collider.GetComponentInParent<CoasterPassengerManager>() == null
+                && singleHit.collider.GetComponentInParent<PlayerNPCBodyController>() == null)
             {
                 return new Vector3(referencePos.x, singleHit.point.y, referencePos.z);
             }
@@ -824,10 +921,84 @@ public class SeatSwitcher : MonoBehaviour
         SetControllersActive(true);
     }
 
-    private void SetControllersActive(bool isActive)
+    public void SetControllersActive(bool isActive)
     {
+        bool isHMD = DesktopUIInputFallback.IsHMDConnected();
+
+        // 1. Khi chơi trên Desktop (không có kính VR thật) và bật autoHideControllersOnDesktop:
+        // Luôn tắt 2 tay cầm và triệt tiêu toàn bộ tia laser trắng để màn hình thông thoáng 100%
+        if (autoHideControllersOnDesktop && !isHMD)
+        {
+            if (leftController != null) leftController.SetActive(false);
+            if (rightController != null) rightController.SetActive(false);
+            DisableAllControllerLineVisuals();
+            return;
+        }
+
+        // 2. Khi cắm kính VR thật
         if (leftController != null) leftController.SetActive(isActive);
         if (rightController != null) rightController.SetActive(isActive);
+
+        if (!isActive || hideControllerRays)
+        {
+            DisableAllControllerLineVisuals();
+        }
+        else
+        {
+            EnableAllControllerLineVisuals();
+        }
+    }
+
+    /// <summary>
+    /// Vô hiệu hóa triệt để tất cả LineRenderer và InteractorLineVisual trên toàn bộ XR Origin
+    /// </summary>
+    public void DisableAllControllerLineVisuals()
+    {
+        if (xrOriginRig == null) CacheInitialCameraRig();
+        if (xrOriginRig == null) return;
+
+        LineRenderer[] lines = xrOriginRig.GetComponentsInChildren<LineRenderer>(true);
+        foreach (var l in lines)
+        {
+            if (l != null && l.enabled) l.enabled = false;
+        }
+
+        MonoBehaviour[] scripts = xrOriginRig.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var mb in scripts)
+        {
+            if (mb == null) continue;
+            string n = mb.GetType().Name;
+            if (n.Contains("LineVisual") || n.Contains("XRInteractorLineVisual") || n.Contains("RayVisual") || n.Contains("CurveVisual"))
+            {
+                mb.enabled = false;
+            }
+        }
+    }
+
+    public void EnableAllControllerLineVisuals()
+    {
+        if (xrOriginRig == null) CacheInitialCameraRig();
+        if (xrOriginRig == null) return;
+
+        bool isHMD = DesktopUIInputFallback.IsHMDConnected();
+        if (!isHMD && autoHideControllersOnDesktop) return;
+
+        LineRenderer[] lines = xrOriginRig.GetComponentsInChildren<LineRenderer>(true);
+        foreach (var l in lines)
+        {
+            if (l != null && !l.enabled) l.enabled = true;
+        }
+
+        MonoBehaviour[] scripts = xrOriginRig.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var mb in scripts)
+        {
+            if (mb == null) continue;
+            string n = mb.GetType().Name;
+            if (n.Contains("LineVisual") || n.Contains("XRInteractorLineVisual") || n.Contains("RayVisual") || n.Contains("CurveVisual"))
+            {
+                mb.enabled = true;
+            }
+        }
     }
 
     /// <summary>
@@ -836,6 +1007,11 @@ public class SeatSwitcher : MonoBehaviour
     public void ReturnToParkMap()
     {
         Time.timeScale = 1f;
+
+        if (aerialCameraController != null)
+        {
+            aerialCameraController.ResetToCockpit();
+        }
 
         if (passengerManager != null)
         {

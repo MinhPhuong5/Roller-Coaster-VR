@@ -27,6 +27,11 @@ public class CoasterAudio : MonoBehaviour
         {
             trackAudioSource.loop = true;
             trackAudioSource.playOnAwake = false;
+            trackAudioSource.spatialBlend = 1.0f;
+            trackAudioSource.spread = 0f;
+            trackAudioSource.dopplerLevel = 1.0f;
+            trackAudioSource.minDistance = 3.0f;
+            trackAudioSource.maxDistance = 150.0f;
             trackAudioSource.Stop();
         }
     }

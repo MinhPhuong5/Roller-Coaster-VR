@@ -125,11 +125,18 @@ public class RollerCoasterInteraction : MonoBehaviour
             Canvas canvas = confirmationModalPanel.GetComponentInParent<Canvas>();
             if (canvas != null)
             {
-                // Đảm bảo có GraphicRaycaster để nhận click chuột / VR
-                if (canvas.GetComponent<GraphicRaycaster>() == null)
+                if (canvas.renderMode == RenderMode.WorldSpace && canvas.worldCamera == null)
                 {
-                    canvas.gameObject.AddComponent<GraphicRaycaster>();
+                    canvas.worldCamera = Camera.main;
                 }
+
+                // Đảm bảo có GraphicRaycaster để nhận click chuột / VR
+                GraphicRaycaster gr = canvas.GetComponent<GraphicRaycaster>();
+                if (gr == null)
+                {
+                    gr = canvas.gameObject.AddComponent<GraphicRaycaster>();
+                }
+                gr.enabled = true;
             }
 
             // Tắt hoàn toàn Image nền của Panel cha (xóa bỏ viền panel/khung tối thừa bên ngoài)

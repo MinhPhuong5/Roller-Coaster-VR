@@ -19,6 +19,7 @@ public class RideController : MonoBehaviour
     [Header("Phối hợp với ghế / khách")]
     public SeatSwitcher seatSwitcher;
     public CoasterPassengerManager passengerManager;
+    public CoasterAerialCameraController aerialCameraController;
 
     [Header("Motion Inverter")]
     public CoasterFollower motionInverter;
@@ -115,6 +116,20 @@ public class RideController : MonoBehaviour
         if (passengerManager != null)
         {
             passengerManager.rideController = this;
+        }
+
+        if (aerialCameraController == null)
+        {
+            aerialCameraController = GetComponent<CoasterAerialCameraController>();
+            if (aerialCameraController == null) aerialCameraController = Object.FindAnyObjectByType<CoasterAerialCameraController>();
+            if (aerialCameraController == null)
+            {
+                aerialCameraController = gameObject.AddComponent<CoasterAerialCameraController>();
+            }
+        }
+        if (aerialCameraController != null)
+        {
+            aerialCameraController.rideController = this;
         }
 
         if (xrOriginObject == null)
@@ -245,6 +260,7 @@ public class RideController : MonoBehaviour
         hasPlayedBrakeSqueal = false;
         currentState = RideState.Riding;
 
+        if (aerialCameraController != null) aerialCameraController.OnRideStart();
         if (passengerManager != null) passengerManager.SetAllPassengersThrilled(false);
 
         if (trackWindAudio != null)
@@ -264,6 +280,8 @@ public class RideController : MonoBehaviour
         currentState = RideState.Finished;
 
         Debug.Log("[RideController] Tàu bắt đầu vào ga phanh -> Gọi SeatSwitcher xử lý dừng hẳn.");
+
+        if (aerialCameraController != null) aerialCameraController.ResetToCockpit();
 
         state.time = ActualStationTime;
         state.speed = 0f;
@@ -301,6 +319,8 @@ public class RideController : MonoBehaviour
     {
         currentState = RideState.WaitingAtStation;
         traveledAnimationTime = 0f;
+
+        if (aerialCameraController != null) aerialCameraController.OnRideStart();
 
         if (seatSwitcher != null)
         {

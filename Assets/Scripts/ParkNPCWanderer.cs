@@ -58,6 +58,8 @@ public class ParkNPCWanderer : MonoBehaviour
 
     private Animator animator;
     private CharacterController characterController;
+    private CapsuleCollider capsuleCollider;
+    private Rigidbody npcRigidbody;
     private Vector3 originCenterPos;
     private Vector3 targetDestination;
     private int currentWaypointIndex = 0;
@@ -74,6 +76,8 @@ public class ParkNPCWanderer : MonoBehaviour
         animator = GetComponent<Animator>();
         characterController = GetComponent<CharacterController>();
 
+        EnsureColliderAndRigidbody();
+
         if (animator != null)
         {
             if (animator.runtimeAnimatorController == null)
@@ -89,6 +93,35 @@ public class ParkNPCWanderer : MonoBehaviour
 
         // Tự động tìm tất cả các WalkZone trong Scene nếu chưa được gán thủ công
         FindAndCacheWalkZones();
+    }
+
+    /// <summary>
+    /// Đảm bảo NPC có CapsuleCollider và Kinematic Rigidbody chuẩn để người chơi không thể đi xuyên qua NPC.
+    /// </summary>
+    public void EnsureColliderAndRigidbody()
+    {
+        capsuleCollider = GetComponent<CapsuleCollider>();
+        if (capsuleCollider == null)
+        {
+            capsuleCollider = gameObject.AddComponent<CapsuleCollider>();
+        }
+
+        capsuleCollider.center = new Vector3(0f, 0.9f, 0f);
+        capsuleCollider.radius = 0.28f;
+        capsuleCollider.height = 1.8f;
+        capsuleCollider.isTrigger = false;
+        capsuleCollider.enabled = true;
+
+        npcRigidbody = GetComponent<Rigidbody>();
+        if (npcRigidbody == null)
+        {
+            npcRigidbody = gameObject.AddComponent<Rigidbody>();
+        }
+
+        npcRigidbody.isKinematic = true;
+        npcRigidbody.useGravity = false;
+        npcRigidbody.detectCollisions = true;
+        npcRigidbody.interpolation = RigidbodyInterpolation.None;
     }
 
     void Start()

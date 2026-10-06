@@ -77,7 +77,7 @@ public class CoasterPassengerManager : MonoBehaviour
     // Danh sách 4 đối tượng NPC thực tế đang ngồi trên 4 ghế trong tàu
     [SerializeField] private GameObject[] spawnedPassengerObjects = new GameObject[4];
     private Animator[] passengerAnimators = new Animator[4];
-    private Transform[] passengerHeadBones = new Transform[4];
+    [HideInInspector] public Transform[] passengerHeadBones = new Transform[4];
     [SerializeField] private int[] passengerThrillTypes = new int[4]; // 0: Giơ 2 tay, 1: Vẫy tay, 2: Bám rung lắc, 3: Chới với
 
     private int currentPlayerSeatIndex = -1;
@@ -421,7 +421,7 @@ public class CoasterPassengerManager : MonoBehaviour
                 npcInstance.transform.localRotation = Quaternion.Euler(seatRotationOffset);
                 npcInstance.transform.localScale = npcScale;
 
-                DisableUnneededComponents(npcInstance);
+                DisableUnneededComponents(npcInstance, true);
 
                 Animator anim = npcInstance.GetComponent<Animator>();
                 if (anim != null)
@@ -652,8 +652,8 @@ public class CoasterPassengerManager : MonoBehaviour
         }
 
         // 2. CÁC MỐC THỜI GIAN LEO DỐC CHẬM RÕ RỆT TRÊN RAY (SLOW SECTIONS):
-        // 24s -> 31s (Đoạn quay xe lên dốc 2), 69s -> 76s (Đoạn đỉnh dốc chậm)
-        bool inSlowTrackSection = (loopTime >= 24.0f && loopTime <= 31.0f) || (loopTime >= 69.0f && loopTime <= 76.0f);
+        // 24s -> 31s (Đoạn quay xe lên dốc 2), 69s -> 73.0s (Đoạn đỉnh dốc chậm trước khi lao xoắn ốc)
+        bool inSlowTrackSection = (loopTime >= 24.0f && loopTime <= 31.0f) || (loopTime >= 69.0f && loopTime <= 73.0f);
 
         // 3. TÍNH TOÁN CHUYỂN ĐỘNG VẬT LÝ THỰC TẾ 3D CỦA TOA TÀU:
         Vector3 currentPos = GetCurrentCartPosition();
@@ -681,13 +681,13 @@ public class CoasterPassengerManager : MonoBehaviour
         bool isClimbingSlow = inSlowTrackSection || ((pitchDot < -0.15f || verticalVelocity > 1.2f) && actualSpeed < 10.0f);
 
         // Các đoạn tốc độ cao & cảm giác mạnh liên tục:
-        // 11.5s-23.5s (Đại dốc 1), 32s-48.5s (Đại dốc 2 & lộn vòng), 50s-68.5s (Uốn lượn tốc độ cao), 77s-86.5s (Lao dốc về ga)
-        bool isFastSection = (loopTime >= 11.5f && loopTime <= 23.5f) || (loopTime >= 32.0f && loopTime <= 48.5f) || (loopTime >= 50.0f && loopTime <= 68.5f) || (loopTime >= 77.0f && loopTime <= 86.5f);
+        // 11.5s-23.5s (Đại dốc 1), 32s-48.5s (Đại dốc 2 & lộn vòng), 50s-68.5s (Uốn lượn tốc độ cao), 73.5s-86.5s (Tháp xoắn ốc & Lao dốc về ga)
+        bool isFastSection = (loopTime >= 11.5f && loopTime <= 23.5f) || (loopTime >= 32.0f && loopTime <= 48.5f) || (loopTime >= 50.0f && loopTime <= 68.5f) || (loopTime >= 73.5f && loopTime <= 86.5f);
         bool isDropping = (pitchDot > 0.08f || verticalVelocity < -0.5f);
         bool isHighGTurnOrLoop = (bankDot > 0.25f && actualSpeed > 5.0f);
 
         bool shouldBeThrilled = (isFastSection || isDropping || isHighGTurnOrLoop || actualSpeed > 8.0f) && !isClimbingSlow;
-        bool isMajorDrop = (pitchDot > 0.2f || verticalVelocity < -2.0f || actualSpeed > 14.0f || (loopTime >= 11.5f && loopTime <= 18.0f) || (loopTime >= 32.0f && loopTime <= 40.0f) || (loopTime >= 78.0f && loopTime <= 85.0f));
+        bool isMajorDrop = (pitchDot > 0.2f || verticalVelocity < -2.0f || actualSpeed > 14.0f || (loopTime >= 11.5f && loopTime <= 18.0f) || (loopTime >= 32.0f && loopTime <= 40.0f) || (loopTime >= 73.5f && loopTime <= 86.0f));
 
         if (shouldBeThrilled)
         {
@@ -939,7 +939,7 @@ public class CoasterPassengerManager : MonoBehaviour
         }
     }
 
-    private void DisableUnneededComponents(GameObject npc)
+    private void DisableUnneededComponents(GameObject npc, bool isSeated = false)
     {
         if (npc == null) return;
 
@@ -959,18 +959,50 @@ public class CoasterPassengerManager : MonoBehaviour
             }
         }
 
-        Rigidbody rb = npc.GetComponent<Rigidbody>();
-        if (rb != null)
+        if (isSeated)
         {
-            rb.isKinematic = true;
-            rb.detectCollisions = false;
-        }
+            // Khi ngồi trên tàu: Tắt toàn bộ Collider và Physics để không cản trở chuyển động của toa tàu và ray
+            Rigidbody rb = npc.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.detectCollisions = false;
+            }
 
-        Collider[] colliders = npc.GetComponentsInChildren<Collider>(true);
-        foreach (var col in colliders)
-        {
-            col.enabled = false;
+            Collider[] colliders = npc.GetComponentsInChildren<Collider>(true);
+            foreach (var col in colliders)
+            {
+                col.enabled = false;
+            }
         }
+        else
+        {
+            // Khi đứng chờ ở sảnh ga: Cung cấp CapsuleCollider và Kinematic Rigidbody để người chơi không thể đi xuyên qua NPC
+            SetupStationStandingCollider(npc);
+        }
+    }
+
+    /// <summary>
+    /// Thiết lập CapsuleCollider và Kinematic Rigidbody cho NPC đứng chờ tại sảnh ga
+    /// </summary>
+    private void SetupStationStandingCollider(GameObject npc)
+    {
+        if (npc == null) return;
+
+        CapsuleCollider col = npc.GetComponent<CapsuleCollider>();
+        if (col == null) col = npc.AddComponent<CapsuleCollider>();
+        col.center = new Vector3(0f, 0.9f, 0f);
+        col.radius = 0.28f;
+        col.height = 1.8f;
+        col.isTrigger = false;
+        col.enabled = true;
+
+        Rigidbody rb = npc.GetComponent<Rigidbody>();
+        if (rb == null) rb = npc.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.detectCollisions = true;
+        rb.interpolation = RigidbodyInterpolation.None;
     }
 
     public void SetAllPassengersThrilled(bool isThrilled)

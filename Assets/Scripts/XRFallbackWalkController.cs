@@ -84,14 +84,7 @@ public class XRFallbackWalkController : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        // Bỏ qua mặt đất/sàn
-        if (hit.normal.y > 0.5f) return;
-
-        if (Time.time - lastHitLogTime > 0.8f)
-        {
-            lastHitLogTime = Time.time;
-            Debug.LogError($"<color=red><b>[VẬT CẢN CHẶN ĐƯỜNG] Bạn đang đâm vào: '{hit.gameObject.name}' (Loại: {hit.collider.GetType().Name}, isTrigger: {hit.collider.isTrigger}, Layer: {LayerMask.LayerToName(hit.gameObject.layer)}) tại tọa độ: {hit.point}</b></color>", hit.gameObject);
-        }
+        // Xử lý va chạm vật lý thông thường
     }
 
     void OnEnable()

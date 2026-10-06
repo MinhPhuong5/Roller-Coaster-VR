@@ -679,12 +679,58 @@ public static class NPCSetupTool
             wanderer.boundaryMode = ParkNPCWanderer.BoundaryMode.BoxZoneCollider;
             wanderer.walkZoneColliders = walkZones;
             wanderer.boundaryMargin = 0.35f;
+            wanderer.EnsureColliderAndRigidbody();
 
             EditorUtility.SetDirty(wanderer);
+            EditorUtility.SetDirty(child.gameObject);
             count++;
         }
 
-        Debug.Log($"[NPCSetupTool] Đã tự động gắn Animator và ParkNPCWanderer cho {count} nhân vật trong 'NPC'!");
+        Debug.Log($"[NPCSetupTool] Đã tự động gắn Animator, Collider và ParkNPCWanderer cho {count} nhân vật trong 'NPC'!");
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Setup NPC Colliders (Solid Park NPCs)")]
+    public static void SetupNPCCollidersMenuItem()
+    {
+        GameObject npcRoot = GameObject.Find("NPC");
+        if (npcRoot == null)
+        {
+            EditorUtility.DisplayDialog("Thông Báo", "Không tìm thấy GameObject 'NPC' trong Scene!", "OK");
+            return;
+        }
+
+        int count = 0;
+        foreach (Transform child in npcRoot.transform)
+        {
+            ParkNPCWanderer wanderer = child.GetComponent<ParkNPCWanderer>();
+            if (wanderer != null)
+            {
+                wanderer.EnsureColliderAndRigidbody();
+                EditorUtility.SetDirty(child.gameObject);
+                count++;
+            }
+            else
+            {
+                CapsuleCollider col = child.GetComponent<CapsuleCollider>();
+                if (col == null) col = child.gameObject.AddComponent<CapsuleCollider>();
+                col.center = new Vector3(0f, 0.9f, 0f);
+                col.radius = 0.28f;
+                col.height = 1.8f;
+                col.isTrigger = false;
+
+                Rigidbody rb = child.GetComponent<Rigidbody>();
+                if (rb == null) rb = child.gameObject.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                rb.detectCollisions = true;
+                EditorUtility.SetDirty(child.gameObject);
+                count++;
+            }
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log($"<color=#00FF88><b>[NPCSetupTool] Đã cấu hình va chạm vật lý CapsuleCollider + Kinematic Rigidbody cho {count} NPC thành công!</b></color>");
+        EditorUtility.DisplayDialog("Thành Công", $"Đã thiết lập va chạm vật lý cho {count} NPC trong công viên!\nNgười chơi không thể đi xuyên qua NPC.", "OK");
     }
 
     [MenuItem("Tools/NPC System/1-Click Setup Passenger Voice & Screams (3D Audio)")]
@@ -761,6 +807,55 @@ public static class NPCSetupTool
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("<color=#00FF99><b>[NPCSetupTool] ĐÃ THIẾT LẬP THÀNH CÔNG HỆ THỐNG ÂM THANH TIẾNG HÉT 3D CHO TÀU LƯỢN!</b></color>");
         EditorUtility.DisplayDialog("Thành Công", "Đã thiết lập hoàn tất Hệ thống Âm thanh Tiếng hét 3D (CoasterPassengerVoiceManager):\n- 4 AudioSources 3D cho 4 ghế.\n- Nạp tự động các danh sách Hét Ngắn & Hét Dài cho Nam, Nữ, Trẻ em.\n- Ép Mono & DecompressOnLoad cho toàn bộ file audio.", "OK");
+    }
+
+    [MenuItem("Tools/NPC System/1-Click Disable VR Controller Rays & Pointers (Clean Screen)")]
+    public static void DisableVRControllerRaysMenuItem()
+    {
+        GameObject xrOrigin = GameObject.Find("XR Origin (XR Rig)");
+        if (xrOrigin == null) xrOrigin = GameObject.FindGameObjectWithTag("Player");
+        if (xrOrigin == null)
+        {
+            EditorUtility.DisplayDialog("Thông Báo", "Không tìm thấy XR Origin trong Scene!", "OK");
+            return;
+        }
+
+        int count = 0;
+        LineRenderer[] lines = xrOrigin.GetComponentsInChildren<LineRenderer>(true);
+        foreach (var l in lines)
+        {
+            if (l != null)
+            {
+                l.enabled = false;
+                EditorUtility.SetDirty(l);
+                count++;
+            }
+        }
+
+        MonoBehaviour[] scripts = xrOrigin.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var mb in scripts)
+        {
+            if (mb == null) continue;
+            string n = mb.GetType().Name;
+            if (n.Contains("LineVisual") || n.Contains("XRInteractorLineVisual") || n.Contains("RayVisual") || n.Contains("CurveVisual"))
+            {
+                mb.enabled = false;
+                EditorUtility.SetDirty(mb);
+                count++;
+            }
+        }
+
+        SeatSwitcher seatSwitcher = Object.FindAnyObjectByType<SeatSwitcher>();
+        if (seatSwitcher != null)
+        {
+            seatSwitcher.autoHideControllersOnDesktop = true;
+            seatSwitcher.hideControllerRays = true;
+            EditorUtility.SetDirty(seatSwitcher);
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log($"<color=#00FF88><b>[NPCSetupTool] Đã tắt {count} thành phần tia laser trắng trên XR Origin! Màn hình sạch 100%.</b></color>");
+        EditorUtility.DisplayDialog("Thành Công", $"Đã tắt {count} thành phần tia laser trắng và thiết lập ẩn tay cầm khi chơi trên PC!\nMàn hình sẽ hoàn toàn sạch đẹp khi vào ga và công viên.", "OK");
     }
 }
 #endif
