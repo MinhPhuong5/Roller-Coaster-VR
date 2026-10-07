@@ -705,13 +705,15 @@ public class SeatSwitcher : MonoBehaviour
             string colName = h.collider.gameObject.name.ToLower();
             string rootName = h.collider.transform.root != null ? h.collider.transform.root.name.ToLower() : "";
 
-            // Bỏ qua người chơi, camera, NPC, đường ray, toa tàu, thanh chắn, UI, kiosk
+            // Bỏ qua người chơi, camera, NPC, đường ray, toa tàu, thanh chắn, UI, kiosk, mái che, trần nhà, tường vô hình
             if (colName.Contains("player") || colName.Contains("origin") || colName.Contains("camera")
                 || colName.Contains("npc") || colName.Contains("bot") || colName.Contains("people")
                 || colName.Contains("body") || colName.Contains("character") || colName.Contains("track")
                 || colName.Contains("rail") || colName.Contains("coaster") || colName.Contains("kiosk")
                 || colName.Contains("cart") || colName.Contains("canvas") || colName.Contains("bar")
-                || colName.Contains("gate") || rootName.Contains("coasterrig") || rootName.Contains("player")
+                || colName.Contains("gate") || colName.Contains("roof") || colName.Contains("ceiling")
+                || colName.Contains("invisible") || colName.Contains("barrier") || colName.Contains("blocker")
+                || rootName.Contains("coasterrig") || rootName.Contains("player")
                 || rootName.Contains("origin") || rootName.Contains("npc"))
             {
                 continue;
@@ -728,10 +730,12 @@ public class SeatSwitcher : MonoBehaviour
             return new Vector3(referencePos.x, h.point.y, referencePos.z);
         }
 
-        // Fallback: Raycast đơn giản
-        if (Physics.Raycast(referencePos + Vector3.up * 1.5f, Vector3.down, out RaycastHit singleHit, 15.0f, ~0, QueryTriggerInteraction.Ignore))
+        // Fallback: Raycast đơn giản từ độ cao 1.2m
+        if (Physics.Raycast(referencePos + Vector3.up * 1.2f, Vector3.down, out RaycastHit singleHit, 10.0f, ~0, QueryTriggerInteraction.Ignore))
         {
+            string sColName = singleHit.collider.gameObject.name.ToLower();
             if (!singleHit.collider.isTrigger 
+                && !sColName.Contains("roof") && !sColName.Contains("ceiling") && !sColName.Contains("invisible")
                 && singleHit.collider.GetComponentInParent<ParkNPCWanderer>() == null
                 && singleHit.collider.GetComponentInParent<CoasterPassengerManager>() == null
                 && singleHit.collider.GetComponentInParent<PlayerNPCBodyController>() == null)

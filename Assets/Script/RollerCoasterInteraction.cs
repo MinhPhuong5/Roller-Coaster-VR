@@ -374,12 +374,7 @@ public class RollerCoasterInteraction : MonoBehaviour
             xrOriginObject.transform.SetParent(null);
             xrOriginObject.transform.localScale = Vector3.one;
 
-            Vector3 spawnPos = stationEntryPoint.position;
-            RaycastHit hit;
-            if (Physics.Raycast(spawnPos + Vector3.up * 1.5f, Vector3.down, out hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
-            {
-                spawnPos = hit.point + Vector3.up * 0.05f;
-            }
+            Vector3 spawnPos = SeatSwitcher.FindSolidGroundPosition(stationEntryPoint.position);
             xrOriginObject.transform.SetPositionAndRotation(spawnPos, stationEntryPoint.rotation);
 
             // Chuyển scale của NPC đại diện người chơi lên 1.22x theo tỷ lệ ga tàu lượn

@@ -309,11 +309,8 @@ public class CoasterPassengerManager : MonoBehaviour
             Vector3 targetPos = basePos + waitOffsets[i];
             Quaternion targetRot = baseRot * Quaternion.Euler(0f, Random.Range(-20f, 20f), 0f);
 
-            // BẮN RAYCAST CHÍNH XÁC XUỐNG SÀN NHÀ GA ĐỂ CHÂN CHẠM SÀN 100%
-            if (Physics.Raycast(targetPos + Vector3.up * 5.0f, Vector3.down, out RaycastHit hit, 25.0f, ~0, QueryTriggerInteraction.Ignore))
-            {
-                targetPos = hit.point + Vector3.up * 0.01f;
-            }
+            // DÙNG BỘ LỌC TÌM SÀN CHUẨN (tránh va trúng mái nhà ga, trần nhà hoặc tường vô hình)
+            targetPos = SeatSwitcher.FindSolidGroundPosition(targetPos);
 
             GameObject npcInstance = Instantiate(prefab, targetPos, targetRot);
             npcInstance.name = $"StationWaiting_{i}_{prefab.name}";
@@ -564,11 +561,8 @@ public class CoasterPassengerManager : MonoBehaviour
             Vector3 targetPos = basePos + (waitIdx < waitOffsets.Length ? waitOffsets[waitIdx] : Vector3.zero);
             Quaternion targetRot = baseRot * Quaternion.Euler(0f, Random.Range(-20f, 20f), 0f);
 
-            // BẮN RAYCAST XUỐNG MẶT SÀN NHÀ GA ĐỂ CHÂN CHẠM SÀN 100%
-            if (Physics.Raycast(targetPos + Vector3.up * 2.5f, Vector3.down, out RaycastHit hit, 15.0f, ~0, QueryTriggerInteraction.Ignore))
-            {
-                targetPos = hit.point + Vector3.up * 0.01f;
-            }
+            // DÙNG BỘ LỌC TÌM SÀN CHUẨN (tránh va trúng mái nhà ga, trần nhà hoặc tường vô hình)
+            targetPos = SeatSwitcher.FindSolidGroundPosition(targetPos);
 
             npcObj.transform.SetPositionAndRotation(targetPos, targetRot);
             npcObj.transform.localScale = stationScale;
