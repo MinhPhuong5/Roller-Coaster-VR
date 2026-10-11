@@ -2,6 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -11,6 +15,8 @@ using UnityEditor;
 /// - Âm thanh phát từ các cột loa 3D (Park Speakers) đặt cố định tại các vị trí thực trong công viên (Quảng trường, Quầy vé, Lối đi...).
 /// - Chuẩn 100% 3D Spatial Audio: Người chơi ở gần loa nghe to, đi ra xa âm lượng giảm dần theo cự ly thực tế, quay đầu nghe rõ hướng loa (Trái/Phải/Trước/Sau).
 /// - Đồng bộ tất cả các loa cùng phát chung 1 bài hát (Hệ thống truyền thanh công viên PA System).
+/// - Phát ngẫu nhiên (Shuffle) và TỰ ĐỘNG CHUYỂN BÀI khi hết bài (hoặc gần hết bài bằng Crossfade êm ái), không bao giờ lặp lại 1 bài đơn lẻ.
+/// - Hỗ trợ phím tắt N (Next bài) / B (Lùi bài) để test nhanh trên PC.
 /// - Khi đi sang khu vực ga tàu lượn / lên tàu: Âm thanh tự động tắt hoàn toàn để không ảnh hưởng đến trải nghiệm tàu lượn.
 /// </summary>
 public class ParkPlaylist : MonoBehaviour
@@ -44,11 +50,15 @@ public class ParkPlaylist : MonoBehaviour
     [Tooltip("Tự động phát nhạc ngay khi Play game")]
     public bool autoPlayOnStart = true;
 
-    [Header("3. Danh Sách Các Cột Loa 3D Trong Công Viên")]
+    [Header("3. Phím Tắt Bàn Phím (PC Testing)")]
+    [Tooltip("Bật phím tắt N (Next bài) và B (Previous bài) trên máy tính")]
+    public bool enableKeyboardShortcuts = true;
+
+    [Header("4. Danh Sách Các Cột Loa 3D Trong Công Viên")]
     [Tooltip("Kéo các vị trí cột loa 3D trong Scene vào đây (Nếu để trống, script sẽ tự lấy chính GameObject này hoặc các con của nó làm loa 3D)")]
     public List<Transform> speakerPositions = new List<Transform>();
 
-    [Header("4. Giới Hạn Phạm Vi Phát Nhạc")]
+    [Header("5. Giới Hạn Phạm Vi Phát Nhạc")]
     [Tooltip("Tắt âm hoàn toàn khi người chơi bước vào ga tàu lượn hoặc đang đi tàu")]
     public bool muteInStationAndCoaster = true;
 
@@ -74,6 +84,7 @@ public class ParkPlaylist : MonoBehaviour
     private Transform playerCameraOrRig;
     private float currentZoneVolumeFactor = 1.0f;
     private bool isManualPaused = false;
+    private bool isZonePaused = false;
 
     void Awake()
     {
@@ -87,6 +98,7 @@ public class ParkPlaylist : MonoBehaviour
             return;
         }
 
+        playedIndices.Clear();
         Setup3DSpeakers();
         AutoLoadClipsIfEmpty();
     }
@@ -109,20 +121,78 @@ public class ParkPlaylist : MonoBehaviour
 
     void Update()
     {
-        // 1. Quản lý âm lượng theo vị trí (Công viên = 100%, Nhà ga & Tàu lượn = Tắt hoàn toàn)
+        // 1. Phím tắt chuyển bài nhanh khi test trên PC (N: Next, B: Previous)
+        if (enableKeyboardShortcuts)
+        {
+            HandleKeyboardInput();
+        }
+
+        // 2. Quản lý âm lượng theo vị trí (Công viên = 100%, Nhà ga & Tàu lượn = Tắt hoàn toàn)
         UpdateZoneVolumeTransition();
 
-        // 2. Tự động chuyển bài khi bài hiện tại kết thúc
-        if (speakerChannels.Count > 0 && playlist != null && playlist.Length > 0 && !isManualPaused && currentZoneVolumeFactor > 0.05f)
+        // 3. Tự động chuyển bài khi bài hiện tại kết thúc hoặc sắp hết (Crossfade mượt mà)
+        CheckAutoTrackAdvance();
+    }
+
+    private void HandleKeyboardInput()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null)
         {
-            AudioSource mainActiveSource = isSourceAPlaying ? speakerChannels[0].sourceA : speakerChannels[0].sourceB;
-            if (mainActiveSource != null && !mainActiveSource.isPlaying)
+            if (Keyboard.current.nKey.wasPressedThisFrame)
             {
-                if (mainActiveSource.time == 0f || (mainActiveSource.clip != null && mainActiveSource.time >= mainActiveSource.clip.length - 0.15f))
+                Debug.Log("<color=cyan>[ParkPlaylist] Phím N -> Chuyển sang bài ngẫu nhiên tiếp theo!</color>");
+                PlayNextTrack();
+            }
+            else if (Keyboard.current.bKey.wasPressedThisFrame)
+            {
+                Debug.Log("<color=cyan>[ParkPlaylist] Phím B -> Quay lại bài trước!</color>");
+                PlayPreviousTrack();
+            }
+        }
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.N))
+        {
+            PlayNextTrack();
+        }
+        else if (Input.GetKeyDown(KeyCode.B))
+        {
+            PlayPreviousTrack();
+        }
+#endif
+    }
+
+    /// <summary>
+    /// Kiểm tra trạng thái phát để tự động chuyển sang bài tiếp theo khi bài hiện tại kết thúc
+    /// </summary>
+    private void CheckAutoTrackAdvance()
+    {
+        if (speakerChannels.Count == 0 || playlist == null || playlist.Length == 0) return;
+        if (isManualPaused || isZonePaused) return;
+        if (crossfadeCoroutine != null) return; // Đang chuyển bài dở dang thì bỏ qua
+
+        AudioSource mainActiveSource = isSourceAPlaying ? speakerChannels[0].sourceA : speakerChannels[0].sourceB;
+        if (mainActiveSource == null || mainActiveSource.clip == null) return;
+
+        // Trường hợp 1: Bài hát đang phát và sắp hết (còn lại <= crossfadeDuration giây) -> Tự động crossfade sang bài mới
+        if (mainActiveSource.isPlaying)
+        {
+            // Chỉ bắt đầu kiểm tra thời gian còn lại khi bài đã chạy được ít nhất 3 giây (tránh trigger ngay lúc mới bắt đầu)
+            if (mainActiveSource.time > 3.0f)
+            {
+                float remainingTime = mainActiveSource.clip.length - mainActiveSource.time;
+                if (remainingTime <= Mathf.Max(0.5f, crossfadeDuration))
                 {
+                    Debug.Log($"<color=#00FFAA><b>[ParkPlaylist] Bài '{mainActiveSource.clip.name}' sắp hết ({remainingTime:F1}s) -> Tự động chuyển tiếp sang bài mới...</b></color>");
                     PlayNextTrack();
                 }
             }
+        }
+        // Trường hợp 2: Bài hát đã chạy xong hoàn toàn (isPlaying == false) và người chơi đang ở công viên
+        else if (!mainActiveSource.isPlaying && currentZoneVolumeFactor > 0.05f)
+        {
+            Debug.Log($"<color=#00FFAA><b>[ParkPlaylist] Bài '{mainActiveSource.clip.name}' đã phát xong -> Chuyển sang bài tiếp theo...</b></color>");
+            PlayNextTrack();
         }
     }
 
@@ -191,7 +261,7 @@ public class ParkPlaylist : MonoBehaviour
     {
         if (src == null) return;
         src.playOnAwake = false;
-        src.loop = false;
+        src.loop = false; // Tuyệt đối không loop trên AudioSource để không bị kẹt lặp lại 1 bài
         src.spatialBlend = 1.0f; // 100% 3D Spatial Audio trong không gian thế giới thực
         src.rolloffMode = AudioRolloffMode.Linear; // Giảm âm tuyến tính mượt mà theo cự ly
         src.minDistance = minSpeakerDistance;
@@ -260,7 +330,7 @@ public class ParkPlaylist : MonoBehaviour
 
         currentZoneVolumeFactor = Mathf.MoveTowards(currentZoneVolumeFactor, targetFactor, Time.unscaledDeltaTime / 1.5f);
 
-        // Cập nhật âm lượng cho tất cả các loa
+        // Cập nhật âm lượng cho tất cả các loa nếu không đang trong crossfade
         if (crossfadeCoroutine == null)
         {
             float finalVol = masterVolume * currentZoneVolumeFactor;
@@ -274,35 +344,43 @@ public class ParkPlaylist : MonoBehaviour
             }
         }
 
-        // Tự động tạm dừng khi âm lượng về 0 và tiếp tục phát khi quay lại công viên
+        // Tự động tạm dừng khi âm lượng về 0 (khi bước vào ga tàu hoặc lên tàu lượn)
         if (currentZoneVolumeFactor <= 0.001f)
         {
-            foreach (var ch in speakerChannels)
+            if (!isZonePaused)
             {
-                AudioSource activeSrc = isSourceAPlaying ? ch.sourceA : ch.sourceB;
-                if (activeSrc != null && activeSrc.isPlaying && !isManualPaused)
+                isZonePaused = true;
+                foreach (var ch in speakerChannels)
                 {
-                    activeSrc.Pause();
+                    AudioSource activeSrc = isSourceAPlaying ? ch.sourceA : ch.sourceB;
+                    if (activeSrc != null && activeSrc.isPlaying && !isManualPaused)
+                    {
+                        activeSrc.Pause();
+                    }
                 }
             }
         }
+        // Tiếp tục phát lại bài hát khi quay trở lại công viên
         else
         {
-            foreach (var ch in speakerChannels)
+            if (isZonePaused)
             {
-                AudioSource activeSrc = isSourceAPlaying ? ch.sourceA : ch.sourceB;
-                if (activeSrc != null && !activeSrc.isPlaying && !isManualPaused && activeSrc.clip != null)
+                isZonePaused = false;
+                foreach (var ch in speakerChannels)
                 {
-                    activeSrc.UnPause();
-                    if (!activeSrc.isPlaying)
+                    AudioSource activeSrc = isSourceAPlaying ? ch.sourceA : ch.sourceB;
+                    if (activeSrc != null && !isManualPaused && activeSrc.clip != null)
                     {
-                        activeSrc.Play();
+                        activeSrc.UnPause();
                     }
                 }
             }
         }
     }
 
+    /// <summary>
+    /// Chuyển sang bài hát ngẫu nhiên tiếp theo
+    /// </summary>
     public void PlayNextTrack()
     {
         if (playlist == null || playlist.Length == 0) return;
@@ -318,12 +396,51 @@ public class ParkPlaylist : MonoBehaviour
         crossfadeCoroutine = StartCoroutine(CrossfadeRoutine(nextClip));
     }
 
+    /// <summary>
+    /// Quay lại bài hát đã phát trước đó
+    /// </summary>
+    public void PlayPreviousTrack()
+    {
+        if (playlist == null || playlist.Length == 0) return;
+
+        int prevIndex = -1;
+        if (shuffle)
+        {
+            if (playedIndices.Count > 1)
+            {
+                // Bỏ bài hiện tại ra khỏi lịch sử vừa phát
+                playedIndices.RemoveAt(playedIndices.Count - 1);
+                prevIndex = playedIndices[playedIndices.Count - 1];
+            }
+            else
+            {
+                prevIndex = GetNextTrackIndex();
+            }
+        }
+        else
+        {
+            prevIndex = currentTrackIndex - 1;
+            if (prevIndex < 0) prevIndex = playlist.Length - 1;
+        }
+
+        if (prevIndex < 0 || prevIndex >= playlist.Length) return;
+
+        currentTrackIndex = prevIndex;
+        AudioClip prevClip = playlist[currentTrackIndex];
+        if (prevClip == null) return;
+
+        if (crossfadeCoroutine != null) StopCoroutine(crossfadeCoroutine);
+        crossfadeCoroutine = StartCoroutine(CrossfadeRoutine(prevClip));
+    }
+
     private int GetNextTrackIndex()
     {
+        if (playlist == null || playlist.Length == 0) return -1;
         if (playlist.Length == 1) return 0;
 
         if (shuffle)
         {
+            // Nếu đã phát hết toàn bộ danh sách -> Làm mới danh sách để lặp lại chu kỳ mới
             if (playedIndices.Count >= playlist.Length)
             {
                 if (!loopPlaylist) return -1;
@@ -333,20 +450,28 @@ public class ParkPlaylist : MonoBehaviour
             List<int> unplayed = new List<int>();
             for (int i = 0; i < playlist.Length; i++)
             {
+                if (playlist[i] == null) continue;
+                // Không chọn bài vừa phát xong và các bài đã phát trong chu kỳ này
                 if (!playedIndices.Contains(i) && i != currentTrackIndex)
                 {
                     unplayed.Add(i);
                 }
             }
 
+            // Nếu tất cả bài còn lại đã phát hết hoặc chỉ còn trùng bài hiện tại
             if (unplayed.Count == 0)
             {
                 playedIndices.Clear();
                 for (int i = 0; i < playlist.Length; i++)
                 {
-                    if (i != currentTrackIndex) unplayed.Add(i);
+                    if (playlist[i] != null && i != currentTrackIndex)
+                    {
+                        unplayed.Add(i);
+                    }
                 }
             }
+
+            if (unplayed.Count == 0) return 0;
 
             int picked = unplayed[Random.Range(0, unplayed.Count)];
             playedIndices.Add(picked);
@@ -366,61 +491,74 @@ public class ParkPlaylist : MonoBehaviour
 
     private IEnumerator CrossfadeRoutine(AudioClip newClip)
     {
-        // 1. Chuẩn bị nguồn phát cho tất cả các loa
+        // Xác định rõ ràng nguồn cũ (đang phát) và nguồn mới (sẽ nhận bài mới)
+        bool oldIsSourceA = isSourceAPlaying;
+        bool newIsSourceA = !isSourceAPlaying;
+
+        // 1. Chuẩn bị bài hát mới trên nguồn mới cho tất cả các loa
         foreach (var ch in speakerChannels)
         {
-            AudioSource fadeInSource = isSourceAPlaying ? ch.sourceB : ch.sourceA;
-            if (fadeInSource != null)
+            if (ch == null) continue;
+            AudioSource newSrc = newIsSourceA ? ch.sourceA : ch.sourceB;
+            if (newSrc != null)
             {
-                fadeInSource.clip = newClip;
-                fadeInSource.time = 0f;
-                fadeInSource.volume = 0f;
-                fadeInSource.minDistance = minSpeakerDistance;
-                fadeInSource.maxDistance = maxSpeakerDistance;
-                fadeInSource.spatialBlend = 1.0f;
-                fadeInSource.rolloffMode = AudioRolloffMode.Linear;
-                fadeInSource.Play();
+                newSrc.clip = newClip;
+                newSrc.time = 0f;
+                newSrc.volume = 0f;
+                newSrc.loop = false; // Đảm bảo loop = false để không tự lặp lại 1 bài
+                newSrc.minDistance = minSpeakerDistance;
+                newSrc.maxDistance = maxSpeakerDistance;
+                newSrc.spatialBlend = 1.0f;
+                newSrc.rolloffMode = AudioRolloffMode.Linear;
+                newSrc.Play();
             }
         }
-
-        isSourceAPlaying = !isSourceAPlaying;
 
         float duration = Mathf.Max(0.2f, crossfadeDuration);
         float elapsed = 0f;
 
+        // 2. Chuyển đổi âm lượng từ từ: nguồn cũ giảm dần về 0, nguồn mới tăng dần lên targetVol
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-
             float targetVol = masterVolume * currentZoneVolumeFactor;
 
             foreach (var ch in speakerChannels)
             {
-                AudioSource fadeOutSource = isSourceAPlaying ? ch.sourceA : ch.sourceB;
-                AudioSource fadeInSource = isSourceAPlaying ? ch.sourceB : ch.sourceA;
+                if (ch == null) continue;
+                AudioSource oldSrc = oldIsSourceA ? ch.sourceA : ch.sourceB;
+                AudioSource newSrc = newIsSourceA ? ch.sourceA : ch.sourceB;
 
-                if (fadeInSource != null) fadeInSource.volume = Mathf.Lerp(0f, targetVol, t);
-                if (fadeOutSource != null) fadeOutSource.volume = Mathf.Lerp(targetVol, 0f, t);
+                if (oldSrc != null) oldSrc.volume = Mathf.Lerp(targetVol, 0f, t);
+                if (newSrc != null) newSrc.volume = Mathf.Lerp(0f, targetVol, t);
             }
 
             yield return null;
         }
 
+        // 3. Hoàn tất chuyển bài: Tắt hẳn nguồn cũ, giữ nguồn mới ở âm lượng chuẩn
         foreach (var ch in speakerChannels)
         {
-            AudioSource fadeOutSource = isSourceAPlaying ? ch.sourceA : ch.sourceB;
-            AudioSource fadeInSource = isSourceAPlaying ? ch.sourceB : ch.sourceA;
+            if (ch == null) continue;
+            AudioSource oldSrc = oldIsSourceA ? ch.sourceA : ch.sourceB;
+            AudioSource newSrc = newIsSourceA ? ch.sourceA : ch.sourceB;
 
-            if (fadeInSource != null) fadeInSource.volume = masterVolume * currentZoneVolumeFactor;
-            if (fadeOutSource != null)
+            if (oldSrc != null)
             {
-                fadeOutSource.Stop();
-                fadeOutSource.volume = 0f;
+                oldSrc.Stop();
+                oldSrc.volume = 0f;
+            }
+            if (newSrc != null)
+            {
+                newSrc.volume = masterVolume * currentZoneVolumeFactor;
             }
         }
 
+        // 4. CHÍNH THỨC CẬP NHẬT nguồn mới thành nguồn đang hoạt động
+        isSourceAPlaying = newIsSourceA;
         crossfadeCoroutine = null;
+
         Debug.Log($"<color=#00FFAA><b>[ParkPlaylist 3D] Đang phát đồng bộ trên {speakerChannels.Count} loa: '{newClip.name}' (Bài {currentTrackIndex + 1}/{playlist.Length})</b></color>");
     }
 
