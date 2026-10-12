@@ -166,7 +166,6 @@ public class RideController : MonoBehaviour
         // 2. Cập nhật âm thanh ray & xích kéo
         UpdateLapAudio(targetSpeed, currentLoopTime, currentLapIndex, isFinalLap);
 
-        // 3. Quản lý chuyển động cảm giác mạnh được xử lý động theo vật lý thực tế trong CoasterPassengerManager.DetectHeightVariationAndThrill()
 
         // 4. Về đích: Đợi chạy đủ toàn bộ thời lượng vòng chạy -> Dừng tàu tại ga và SeatSwitcher sẽ đóng rào an toàn
         if (traveledAnimationTime >= (clipLength * numberOfLaps))
